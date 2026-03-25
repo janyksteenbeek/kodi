@@ -1,24 +1,25 @@
-//
-//  ContentView.swift
-//  diffi
-//
-//  Created by Janyk Steenbeek on 25/03/2026.
-//
-
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    @Environment(AppState.self) private var appState
 
-#Preview {
-    ContentView()
+    var body: some View {
+        NavigationSplitView {
+            SidebarView()
+        } detail: {
+            if let vm = appState.selectedViewModel {
+                DiffContentView(viewModel: vm)
+            } else {
+                ContentUnavailableView(
+                    "Welcome to diffi",
+                    systemImage: "arrow.triangle.branch",
+                    description: Text("Add a git repository to start viewing diffs")
+                )
+            }
+        }
+        .frame(minWidth: 800, minHeight: 500)
+        .task {
+            appState.loadSavedRepositories()
+        }
+    }
 }
