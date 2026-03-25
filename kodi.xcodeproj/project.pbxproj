@@ -7,13 +7,13 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		A6CFE0FB2F74829D00D3DEFF /* diffi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = diffi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A6CFE0FB2F74829D00D3DEFF /* kodi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = kodi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A6CFE0FD2F74829D00D3DEFF /* diffi */ = {
+		A6CFE0FD2F74829D00D3DEFF /* kodi */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = diffi;
+			path = kodi;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,7 +32,7 @@
 		A6CFE0F22F74829D00D3DEFF = {
 			isa = PBXGroup;
 			children = (
-				A6CFE0FD2F74829D00D3DEFF /* diffi */,
+				A6CFE0FD2F74829D00D3DEFF /* kodi */,
 				A6CFE0FC2F74829D00D3DEFF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -40,7 +40,7 @@
 		A6CFE0FC2F74829D00D3DEFF /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A6CFE0FB2F74829D00D3DEFF /* diffi.app */,
+				A6CFE0FB2F74829D00D3DEFF /* kodi.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A6CFE0FA2F74829D00D3DEFF /* diffi */ = {
+		A6CFE0FA2F74829D00D3DEFF /* kodi */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A6CFE1062F74829E00D3DEFF /* Build configuration list for PBXNativeTarget "diffi" */;
+			buildConfigurationList = A6CFE1062F74829E00D3DEFF /* Build configuration list for PBXNativeTarget "kodi" */;
 			buildPhases = (
 				A6CFE0F72F74829D00D3DEFF /* Sources */,
 				A6CFE0F82F74829D00D3DEFF /* Frameworks */,
@@ -61,13 +61,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				A6CFE0FD2F74829D00D3DEFF /* diffi */,
+				A6CFE0FD2F74829D00D3DEFF /* kodi */,
 			);
-			name = diffi;
+			name = kodi;
 			packageProductDependencies = (
 			);
-			productName = diffi;
-			productReference = A6CFE0FB2F74829D00D3DEFF /* diffi.app */;
+			productName = kodi;
+			productReference = A6CFE0FB2F74829D00D3DEFF /* kodi.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -85,7 +85,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A6CFE0F62F74829D00D3DEFF /* Build configuration list for PBXProject "diffi" */;
+			buildConfigurationList = A6CFE0F62F74829D00D3DEFF /* Build configuration list for PBXProject "kodi" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A6CFE0FA2F74829D00D3DEFF /* diffi */,
+				A6CFE0FA2F74829D00D3DEFF /* kodi */,
 			);
 		};
 /* End PBXProject section */
@@ -264,7 +264,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = nl.janyk.diffi;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.janyk.kodi;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -295,7 +295,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = nl.janyk.diffi;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.janyk.kodi;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -310,7 +310,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A6CFE0F62F74829D00D3DEFF /* Build configuration list for PBXProject "diffi" */ = {
+		A6CFE0F62F74829D00D3DEFF /* Build configuration list for PBXProject "kodi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A6CFE1042F74829E00D3DEFF /* Debug */,
@@ -319,7 +319,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A6CFE1062F74829E00D3DEFF /* Build configuration list for PBXNativeTarget "diffi" */ = {
+		A6CFE1062F74829E00D3DEFF /* Build configuration list for PBXNativeTarget "kodi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A6CFE1072F74829E00D3DEFF /* Debug */,

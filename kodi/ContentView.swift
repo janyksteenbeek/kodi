@@ -11,7 +11,7 @@ struct ContentView: View {
                 DiffContentView(viewModel: vm)
             } else {
                 ContentUnavailableView(
-                    "Welcome to diffi",
+                    "Welcome to Kodi",
                     systemImage: "arrow.triangle.branch",
                     description: Text("Add a git repository to start viewing diffs")
                 )

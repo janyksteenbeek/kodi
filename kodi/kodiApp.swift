@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct diffiApp: App {
+struct kodiApp: App {
     @State private var appState = AppState()
 
     var body: some Scene {
