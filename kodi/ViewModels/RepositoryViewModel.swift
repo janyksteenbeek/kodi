@@ -10,8 +10,12 @@ final class RepositoryViewModel: Identifiable {
     var currentDiff: [DiffResult] = []
     var commitMessage: String = ""
     var isLoading: Bool = false
+    var isSyncing: Bool = false
     var error: String?
     var diffMode: DiffMode = .unified
+    var hasRemote: Bool = false
+    var commitsAhead: Int = 0
+    var commitsBehind: Int = 0
 
     private let gitService: GitService
 
@@ -63,11 +67,68 @@ final class RepositoryViewModel: Identifiable {
             self.error = error.localizedDescription
         }
         isLoading = false
+        await refreshRemoteStatus()
     }
+
+    func push() async {
+        isSyncing = true
+        error = nil
+        do {
+            try await gitService.push(at: repository.path)
+            await refreshRemoteStatus()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isSyncing = false
+    }
+
+    func pull() async {
+        isSyncing = true
+        error = nil
+        do {
+            try await gitService.pull(at: repository.path)
+            await refresh()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isSyncing = false
+    }
+
+    private func refreshRemoteStatus() async {
+        hasRemote = await gitService.hasRemote(at: repository.path)
+        if hasRemote {
+            let counts = await gitService.aheadBehind(at: repository.path)
+            commitsAhead = counts.ahead
+            commitsBehind = counts.behind
+        }
+    }
+
+    static let allChangesTag = "__all__"
+    static let folderTagPrefix = "__folder__:"
 
     func selectFile(_ file: ChangedFile) async {
         selectedFilePath = file.path
         await loadDiff(for: file.path)
+    }
+
+    func selectFiles(_ files: [ChangedFile]) async {
+        isLoading = true
+        var allDiffs: [DiffResult] = []
+        for file in files {
+            do {
+                let rawDiff: String
+                if file.status == .untracked {
+                    rawDiff = try await gitService.diffUntrackedFile(at: repository.path, file: file.path)
+                } else {
+                    rawDiff = try await gitService.diffForFile(at: repository.path, file: file.path, staged: file.isStaged)
+                }
+                allDiffs.append(contentsOf: DiffParser.parse(rawDiff))
+            } catch {
+                // Skip files that fail to diff
+            }
+        }
+        currentDiff = allDiffs
+        isLoading = false
     }
 
     func toggleStaging(for file: ChangedFile) {

@@ -21,20 +21,29 @@ struct SidebarView: View {
                       let vm = appState.selectedViewModel {
                 List(selection: Binding(
                     get: { vm.selectedFilePath },
-                    set: { newPath in
-                        if let path = newPath,
-                           let file = vm.changedFiles.first(where: { $0.path == path }) {
+                    set: { newValue in
+                        guard let value = newValue else { return }
+                        vm.selectedFilePath = value
+
+                        if value == RepositoryViewModel.allChangesTag {
+                            Task { await vm.selectFiles(vm.changedFiles) }
+                        } else if value.hasPrefix(RepositoryViewModel.folderTagPrefix) {
+                            let folderId = String(value.dropFirst(RepositoryViewModel.folderTagPrefix.count))
+                            let tree = FileTreeNode.buildTree(from: vm.changedFiles)
+                            if let folderFiles = findFolderFiles(folderId, in: tree) {
+                                Task { await vm.selectFiles(folderFiles) }
+                            }
+                        } else if let file = vm.changedFiles.first(where: { $0.path == value }) {
                             Task { await vm.selectFile(file) }
                         }
                     }
                 )) {
-                    RepositorySection(repository: repo, viewModel: vm)
+                    RepositorySection(viewModel: vm)
                 }
                 .listStyle(.sidebar)
+                .id(repo.id)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if !vm.changedFiles.isEmpty {
-                        CommitView(viewModel: vm)
-                    }
+                    CommitView(viewModel: vm)
                 }
             }
         }
@@ -47,32 +56,55 @@ struct SidebarView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .automatic) {
+            ToolbarItem(placement: .primaryAction) {
                 Button(action: { appState.addRepository() }) {
                     Label("Add Repository", systemImage: "plus")
                 }
             }
-            ToolbarItem(placement: .automatic) {
+            ToolbarItem(placement: .primaryAction) {
                 if let vm = appState.selectedViewModel {
-                    Button(action: { Task { await vm.refresh() } }) {
-                        Label("Refresh", systemImage: "arrow.clockwise")
+                    Menu {
+                        Button(action: { Task { await vm.refresh() } }) {
+                            Label("Refresh", systemImage: "arrow.clockwise")
+                        }
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                appState.groupByFolder.toggle()
+                            }
+                        } label: {
+                            Label(
+                                appState.groupByFolder ? "Flat List" : "Group by Folder",
+                                systemImage: appState.groupByFolder ? "list.bullet" : "folder"
+                            )
+                        }
+                        if appState.repositories.count > 1 {
+                            Divider()
+                            Button(role: .destructive, action: {
+                                if let repo = appState.selectedRepository {
+                                    withAnimation { appState.removeRepository(id: repo.id) }
+                                }
+                            }) {
+                                Label("Remove Repository", systemImage: "trash")
+                            }
+                        }
+                    } label: {
+                        Label("Options", systemImage: "ellipsis.circle")
                     }
                 }
-            }
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        appState.groupByFolder.toggle()
-                    }
-                } label: {
-                    Label(
-                        appState.groupByFolder ? "Flat List" : "Group by Folder",
-                        systemImage: appState.groupByFolder ? "list.bullet" : "folder"
-                    )
-                }
-                .help(appState.groupByFolder ? "Show as flat list" : "Group by folder")
             }
         }
         .frame(minWidth: 260)
+    }
+
+    private func findFolderFiles(_ folderId: String, in nodes: [FileTreeNode]) -> [ChangedFile]? {
+        for node in nodes {
+            if node.isFolder && node.id == folderId {
+                return node.allFiles
+            }
+            if node.isFolder, let found = findFolderFiles(folderId, in: node.children) {
+                return found
+            }
+        }
+        return nil
     }
 }

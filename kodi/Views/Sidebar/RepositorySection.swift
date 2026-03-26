@@ -1,25 +1,42 @@
 import SwiftUI
 
 struct RepositorySection: View {
-    let repository: GitRepository
     @Bindable var viewModel: RepositoryViewModel
 
     var body: some View {
-        Section {
-            if viewModel.changedFiles.isEmpty {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 8)
-                } else {
-                    Text("No changes")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 8)
-                }
-            } else if appState.groupByFolder {
+        if viewModel.changedFiles.isEmpty {
+            if viewModel.isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            } else {
+                Text("No changes")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            }
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "tray.full")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16)
+
+                Text("All Changes")
+
+                Spacer()
+
+                Text("\(viewModel.changedFiles.count)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(.fill.tertiary, in: .capsule)
+            }
+            .tag(RepositoryViewModel.allChangesTag)
+
+            if appState.groupByFolder {
                 let tree = FileTreeNode.buildTree(from: viewModel.changedFiles)
                 ForEach(tree) { node in
                     FileTreeNodeView(node: node, viewModel: viewModel)
@@ -29,41 +46,6 @@ struct RepositorySection: View {
                     ChangedFileRow(file: file, viewModel: viewModel, showDirectory: true)
                         .tag(file.path)
                 }
-            }
-        } header: {
-            HStack {
-                Label(repository.displayName, systemImage: "arrow.triangle.branch")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                if !viewModel.changedFiles.isEmpty {
-                    Text("\(viewModel.changedFiles.count)")
-                        .font(.caption2.bold())
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(.fill.tertiary, in: .capsule)
-                }
-
-                Menu {
-                    Button(action: { viewModel.toggleAllStaging() }) {
-                        let allStaged = viewModel.changedFiles.allSatisfy(\.isStaged)
-                        Label(allStaged ? "Deselect All" : "Select All",
-                              systemImage: allStaged ? "square" : "checkmark.square")
-                    }
-                    Divider()
-                    Button(role: .destructive, action: {
-                        withAnimation { appState.removeRepository(id: repository.id) }
-                    }) {
-                        Label("Remove Repository", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .foregroundStyle(.secondary)
-                }
-                .menuStyle(.borderlessButton)
-                .frame(width: 20)
             }
         }
     }

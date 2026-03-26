@@ -20,9 +20,7 @@ private struct FolderNodeView: View {
     @State private var isExpanded = true
 
     private var allFiles: [ChangedFile] { node.allFiles }
-
     private var allStaged: Bool { allFiles.allSatisfy(\.isStaged) }
-    private var noneStaged: Bool { !allFiles.contains(where: \.isStaged) }
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
@@ -40,12 +38,9 @@ private struct FolderNodeView: View {
 
                 Image(systemName: isExpanded ? "folder.fill" : "folder")
                     .foregroundStyle(.secondary)
-                    .imageScale(.medium)
                     .frame(width: 16)
 
                 Text(node.name)
-                    .font(.body)
-                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .help(node.name)
@@ -57,6 +52,7 @@ private struct FolderNodeView: View {
                     .foregroundStyle(.tertiary)
                     .monospacedDigit()
             }
+            .tag(RepositoryViewModel.folderTagPrefix + node.id)
         }
     }
 }

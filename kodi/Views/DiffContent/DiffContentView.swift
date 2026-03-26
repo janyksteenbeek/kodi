@@ -51,7 +51,31 @@ struct DiffContentView: View {
                 .pickerStyle(.segmented)
             }
         }
-        .navigationTitle(viewModel.selectedFile?.fileName ?? viewModel.repository.displayName)
-        .navigationSubtitle(viewModel.selectedFile?.directory ?? "")
+        .navigationTitle(navigationTitle)
+        .navigationSubtitle(navigationSubtitle)
+    }
+
+    private var isMultiFile: Bool {
+        guard let sel = viewModel.selectedFilePath else { return false }
+        return sel == RepositoryViewModel.allChangesTag || sel.hasPrefix(RepositoryViewModel.folderTagPrefix)
+    }
+
+    private var navigationTitle: String {
+        if let sel = viewModel.selectedFilePath {
+            if sel == RepositoryViewModel.allChangesTag {
+                return "All Changes"
+            }
+            if sel.hasPrefix(RepositoryViewModel.folderTagPrefix) {
+                return String(sel.dropFirst(RepositoryViewModel.folderTagPrefix.count))
+            }
+        }
+        return viewModel.selectedFile?.fileName ?? viewModel.repository.displayName
+    }
+
+    private var navigationSubtitle: String {
+        if isMultiFile {
+            return "\(viewModel.currentDiff.count) file\(viewModel.currentDiff.count == 1 ? "" : "s")"
+        }
+        return viewModel.selectedFile?.directory ?? ""
     }
 }

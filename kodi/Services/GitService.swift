@@ -103,6 +103,36 @@ final class GitService: Sendable {
         _ = try await runGit(["commit", "-m", message], at: repositoryPath)
     }
 
+    nonisolated func push(at repositoryPath: URL) async throws {
+        _ = try await runGit(["push"], at: repositoryPath)
+    }
+
+    nonisolated func pull(at repositoryPath: URL) async throws {
+        _ = try await runGit(["pull"], at: repositoryPath)
+    }
+
+    nonisolated func hasRemote(at repositoryPath: URL) async -> Bool {
+        do {
+            let output = try await runGit(["remote"], at: repositoryPath)
+            return !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        } catch {
+            return false
+        }
+    }
+
+    nonisolated func aheadBehind(at repositoryPath: URL) async -> (ahead: Int, behind: Int) {
+        do {
+            let output = try await runGit(["rev-list", "--left-right", "--count", "@{upstream}...HEAD"], at: repositoryPath)
+            let parts = output.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "\t")
+            guard parts.count == 2,
+                  let behind = Int(parts[0]),
+                  let ahead = Int(parts[1]) else { return (0, 0) }
+            return (ahead, behind)
+        } catch {
+            return (0, 0)
+        }
+    }
+
     nonisolated func diffForFile(at repositoryPath: URL, file: String, staged: Bool) async throws -> String {
         var args = ["diff", "--no-color"]
         if staged { args.append("--cached") }

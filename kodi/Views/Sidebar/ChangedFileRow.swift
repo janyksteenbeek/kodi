@@ -6,7 +6,7 @@ struct ChangedFileRow: View {
     var showDirectory: Bool = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             Toggle("", isOn: Binding(
                 get: { file.isStaged },
                 set: { _ in viewModel.toggleStaging(for: file) }
@@ -18,7 +18,6 @@ struct ChangedFileRow: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(file.fileName)
-                    .font(.body)
                     .lineLimit(1)
 
                 if showDirectory, !file.directory.isEmpty {
@@ -35,6 +34,5 @@ struct ChangedFileRow: View {
 
             StatusBadge(status: file.status)
         }
-        .contentShape(Rectangle())
     }
 }

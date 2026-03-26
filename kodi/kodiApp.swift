@@ -10,6 +10,7 @@ struct kodiApp: App {
                 .environment(appState)
         }
         .windowStyle(.automatic)
+        .windowToolbarStyle(.unifiedCompact)
         .defaultSize(width: 1100, height: 700)
         .commands {
             CommandGroup(after: .newItem) {
