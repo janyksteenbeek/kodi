@@ -6,35 +6,38 @@ struct SidebarView: View {
 
     var body: some View {
         List(selection: Binding(
-            get: { viewModel.selectedFilePath },
+            get: { viewModel.selectedFilePaths },
             set: { newValue in
-                viewModel.selectedFilePath = newValue
+                viewModel.selectedFilePaths = newValue
 
-                if let value = newValue {
-                    if value.hasPrefix(RepositoryViewModel.terminalTagPrefix) {
-                        // Terminal selected — no diff loading needed
-                    } else if value.hasPrefix(RepositoryViewModel.folderTagPrefix) {
-                        let folderId = String(value.dropFirst(RepositoryViewModel.folderTagPrefix.count))
-                        let tree = FileTreeNode.buildTree(from: viewModel.changedFiles)
-                        if let folderFiles = findFolderFiles(folderId, in: tree) {
-                            Task { await viewModel.selectFiles(folderFiles) }
-                        }
-                    } else if let file = viewModel.changedFiles.first(where: { $0.path == value }) {
-                        Task { await viewModel.selectFile(file) }
-                    }
+                // Update legacy single selection for terminal/folder compat
+                if newValue.count == 1, let single = newValue.first {
+                    viewModel.selectedFilePath = single
                 } else {
-                    Task { await viewModel.selectFiles(viewModel.changedFiles) }
+                    viewModel.selectedFilePath = nil
                 }
+
+                handleSelectionChange(newValue)
             }
         )) {
             TerminalSection(viewModel: viewModel)
 
-            Section("Changes") {
+            Section {
                 RepositorySection(viewModel: viewModel)
+            } header: {
+                Button {
+                    viewModel.selectedFilePaths = []
+                    viewModel.selectedFilePath = nil
+                    Task { await viewModel.selectFiles(viewModel.changedFiles) }
+                } label: {
+                    Text("Changes")
+                }
+                .buttonStyle(.plain)
             }
         }
         .listStyle(.sidebar)
         .onKeyPress(.escape) {
+            viewModel.selectedFilePaths = []
             viewModel.selectedFilePath = nil
             Task { await viewModel.selectFiles(viewModel.changedFiles) }
             return .handled
@@ -88,6 +91,36 @@ struct SidebarView: View {
             }
         }
         .frame(minWidth: 260)
+    }
+
+    private func handleSelectionChange(_ selection: Set<String>) {
+        if selection.isEmpty {
+            Task { await viewModel.selectFiles(viewModel.changedFiles) }
+            return
+        }
+
+        // Single terminal selected
+        if selection.count == 1, let single = selection.first,
+           single.hasPrefix(RepositoryViewModel.terminalTagPrefix) {
+            return
+        }
+
+        // Single folder selected
+        if selection.count == 1, let single = selection.first,
+           single.hasPrefix(RepositoryViewModel.folderTagPrefix) {
+            let folderId = String(single.dropFirst(RepositoryViewModel.folderTagPrefix.count))
+            let tree = FileTreeNode.buildTree(from: viewModel.changedFiles)
+            if let folderFiles = findFolderFiles(folderId, in: tree) {
+                Task { await viewModel.selectFiles(folderFiles) }
+            }
+            return
+        }
+
+        // One or more files selected
+        let selectedFiles = viewModel.changedFiles.filter { selection.contains($0.path) }
+        if !selectedFiles.isEmpty {
+            Task { await viewModel.selectFiles(selectedFiles) }
+        }
     }
 
     private func findFolderFiles(_ folderId: String, in nodes: [FileTreeNode]) -> [ChangedFile]? {

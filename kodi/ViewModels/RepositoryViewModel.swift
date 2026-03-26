@@ -7,6 +7,7 @@ final class RepositoryViewModel: Identifiable {
 
     var changedFiles: [ChangedFile] = []
     var selectedFilePath: String?
+    var selectedFilePaths: Set<String> = []
     var currentDiff: [DiffResult] = []
     var commitMessage: String = ""
     var isLoading: Bool = false

@@ -11,7 +11,7 @@ struct TerminalSection: View {
             }
 
             Button {
-                viewModel.createTerminal()
+                viewModel.createTerminalInPanel()
             } label: {
                 Label("Open Terminal", systemImage: "plus")
                     .foregroundStyle(.secondary)
