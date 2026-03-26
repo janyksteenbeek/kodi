@@ -207,37 +207,87 @@ private struct WelcomeView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        VStack(spacing: 16) {
-            Spacer()
+        VStack(spacing: 20) {
+                Spacer()
+                Spacer()
 
-            Image(systemName: "arrow.triangle.branch")
-                .font(.system(size: 48, weight: .thin))
-                .foregroundStyle(.tint)
+                // App icon
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 96, height: 96)
+                    .shadow(color: .accentColor.opacity(0.3), radius: 20, y: 5)
 
-            VStack(spacing: 4) {
-                Text("Kodi")
-                    .font(.largeTitle.weight(.bold))
-                Text("The Agentic IDE")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 6) {
+                    Text("Kodi")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                    Text("The Agentic IDE")
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+
+                // Quick actions
+                VStack(spacing: 10) {
+                    Button {
+                        appState.addRepository()
+                    } label: {
+                        Label("Open Repository…", systemImage: "folder.badge.plus")
+                            .frame(width: 200)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+
+                    Text("⌘O")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.top, 4)
+
+                Spacer()
+
+                // Footer with detected tools
+                WelcomeToolsBar()
+                    .padding(.bottom, 20)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
 
-            Button {
-                appState.addRepository()
-            } label: {
-                Label("Open Repository…", systemImage: "folder.badge.plus")
+// MARK: - Detected tools footer
+
+private struct WelcomeToolsBar: View {
+    @State private var tools: [(program: TerminalProgram, installed: Bool)] = []
+
+    var body: some View {
+        VStack(spacing: 8) {
+            if !tools.isEmpty {
+                Text("Detected on this Mac")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.tertiary)
+
+                HStack(spacing: 16) {
+                    ForEach(tools, id: \.program) { tool in
+                        HStack(spacing: 4) {
+                            if tool.program.isCustomImage {
+                                Image(tool.program.icon)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 14, height: 14)
+                                    .foregroundStyle(tool.installed ? tool.program.color : Color.gray.opacity(0.3))
+                            } else {
+                                Image(systemName: tool.program.icon)
+                                    .font(.caption)
+                                    .foregroundStyle(tool.installed ? tool.program.color : Color.gray.opacity(0.3))
+                            }
+                            Text(tool.program.displayName)
+                                .font(.caption)
+                                .foregroundStyle(tool.installed ? .secondary : .tertiary)
+                        }
+                    }
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .padding(.top, 8)
-
-            Text("⌘O")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-
-            Spacer()
-            Spacer()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task {
+            tools = TerminalProgram.aiPrograms.map { ($0, TerminalProgram.isInstalled($0)) }
+        }
     }
 }
