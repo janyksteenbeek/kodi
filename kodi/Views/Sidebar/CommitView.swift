@@ -9,8 +9,36 @@ struct CommitView: View {
         && !viewModel.isLoading
     }
 
+    private var allStaged: Bool {
+        viewModel.changedFiles.allSatisfy(\.isStaged)
+    }
+
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
+            if !viewModel.changedFiles.isEmpty {
+                HStack {
+                    Button {
+                        viewModel.setStaging(!allStaged, for: viewModel.changedFiles)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: allStaged ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(allStaged ? Color.accentColor : .secondary)
+                            Text(allStaged ? "All staged" : "Stage all")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer()
+
+                    Text("\(viewModel.stagedCount)/\(viewModel.changedFiles.count) staged")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .monospacedDigit()
+                }
+            }
+
             TextField("Commit message…", text: $viewModel.commitMessage, axis: .vertical)
                 .lineLimit(2...5)
                 .textFieldStyle(.roundedBorder)
@@ -25,17 +53,30 @@ struct CommitView: View {
 
             HStack(spacing: 6) {
                 if viewModel.hasRemote {
-                    Button("Pull", systemImage: "arrow.down") {
+                    Button {
                         Task { await viewModel.pull() }
+                    } label: {
+                        if viewModel.commitsBehind > 0 {
+                            Label("Pull \(viewModel.commitsBehind)", systemImage: "arrow.down")
+                                .monospacedDigit()
+                        } else {
+                            Label("Pull", systemImage: "arrow.down")
+                                .labelStyle(.iconOnly)
+                        }
                     }
                     .buttonStyle(.bordered)
                     .disabled(viewModel.isSyncing)
 
-                    Button("Push", systemImage: "arrow.up") {
-                        Task { await viewModel.push() }
+                    if viewModel.commitsAhead > 0 {
+                        Button {
+                            Task { await viewModel.push() }
+                        } label: {
+                            Label("Push \(viewModel.commitsAhead)", systemImage: "arrow.up")
+                                .monospacedDigit()
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(viewModel.isSyncing)
                     }
-                    .buttonStyle(.bordered)
-                    .disabled(viewModel.isSyncing)
                 }
 
                 Spacer()
@@ -47,8 +88,7 @@ struct CommitView: View {
                         ProgressView()
                             .controlSize(.small)
                     } else {
-                        Text("Commit (\(viewModel.stagedCount))")
-                            .monospacedDigit()
+                        Text("Commit")
                     }
                 }
                 .buttonStyle(.borderedProminent)

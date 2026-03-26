@@ -12,7 +12,22 @@ struct TerminalSessionRow: View {
             Image(systemName: "terminal")
                 .foregroundStyle(session.isRunning ? .green : .secondary)
         }
+        .onTapGesture(count: 2) {
+            // Double click: open full screen
+            viewModel.selectedFilePaths = [RepositoryViewModel.terminalTagPrefix + session.id.uuidString]
+            viewModel.selectedFilePath = RepositoryViewModel.terminalTagPrefix + session.id.uuidString
+        }
+        .onTapGesture(count: 1) {
+            // Single click: show in panel
+            viewModel.showInPanel(session)
+        }
         .contextMenu {
+            Button {
+                viewModel.selectedFilePaths = [RepositoryViewModel.terminalTagPrefix + session.id.uuidString]
+                viewModel.selectedFilePath = RepositoryViewModel.terminalTagPrefix + session.id.uuidString
+            } label: {
+                Label("Open Full Screen", systemImage: "macwindow")
+            }
             Button {
                 viewModel.showInPanel(session)
             } label: {

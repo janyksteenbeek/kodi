@@ -48,16 +48,57 @@ struct kodiApp: App {
                 }
             }
 
+            // Git menu
+            CommandMenu("Git") {
+                Button("Commit") {
+                    if let vm = focusedVM {
+                        Task { await vm.commit() }
+                    }
+                }
+                .keyboardShortcut(.return, modifiers: .command)
+                .disabled(focusedVM == nil)
+
+                Divider()
+
+                Button("Stage All") {
+                    if let vm = focusedVM {
+                        vm.setStaging(true, for: vm.changedFiles)
+                    }
+                }
+                .disabled(focusedVM?.changedFiles.isEmpty ?? true)
+
+                Button("Unstage All") {
+                    if let vm = focusedVM {
+                        vm.setStaging(false, for: vm.changedFiles)
+                    }
+                }
+                .disabled(focusedVM?.changedFiles.isEmpty ?? true)
+
+                Divider()
+
+                if let vm = focusedVM, vm.hasRemote {
+                    Button("Push") {
+                        Task { await vm.push() }
+                    }
+                    .disabled(vm.isSyncing)
+
+                    Button("Pull") {
+                        Task { await vm.pull() }
+                    }
+                    .disabled(vm.isSyncing)
+                }
+            }
+
             // Terminal menu
             CommandMenu("Terminal") {
                 Button("New Terminal") {
-                    focusedVM?.createTerminal()
+                    focusedVM?.createTerminalInPanel()
                 }
                 .keyboardShortcut("t", modifiers: .command)
                 .disabled(focusedVM == nil)
 
-                Button("New Terminal in Panel") {
-                    focusedVM?.createTerminalInPanel()
+                Button("New Terminal Full Screen") {
+                    focusedVM?.createTerminal()
                 }
                 .keyboardShortcut("t", modifiers: [.command, .shift])
                 .disabled(focusedVM == nil)
@@ -74,6 +115,12 @@ struct kodiApp: App {
                 if !items.isEmpty {
                     Divider()
                 }
+
+                Button("Toggle Terminal Panel") {
+                    focusedVM?.toggleTerminalPanel()
+                }
+                .keyboardShortcut("j", modifiers: .command)
+                .disabled(focusedVM == nil)
 
                 Button("Close Terminal") {
                     if let vm = focusedVM, let terminal = vm.selectedTerminal {

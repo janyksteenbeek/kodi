@@ -55,20 +55,6 @@ struct SidebarView: View {
                 }
             }
             ToolbarItem(placement: .primaryAction) {
-                if !viewModel.changedFiles.isEmpty {
-                    let allStaged = viewModel.changedFiles.allSatisfy(\.isStaged)
-                    Button {
-                        viewModel.setStaging(!allStaged, for: viewModel.changedFiles)
-                    } label: {
-                        Label(
-                            allStaged ? "Unstage All" : "Stage All",
-                            systemImage: allStaged ? "square" : "checkmark.square.fill"
-                        )
-                    }
-                    .help(allStaged ? "Unstage all files" : "Stage all files")
-                }
-            }
-            ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button(action: {
                         Task { await viewModel.refresh() }
