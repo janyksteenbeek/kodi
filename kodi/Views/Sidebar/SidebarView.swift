@@ -34,6 +34,11 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .onKeyPress(.escape) {
+            viewModel.selectedFilePath = nil
+            Task { await viewModel.selectFiles(viewModel.changedFiles) }
+            return .handled
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             QuickLaunchBar(viewModel: viewModel)
         }
