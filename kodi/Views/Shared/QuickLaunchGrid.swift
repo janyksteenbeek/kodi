@@ -1,5 +1,22 @@
 import SwiftUI
 
+struct QuickLaunchIcon: View {
+    let item: QuickLaunchItem
+    var size: CGFloat = 20
+
+    var body: some View {
+        if item.isCustomImage {
+            Image(item.icon)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+        } else {
+            Image(systemName: item.icon)
+                .font(.system(size: size, weight: .medium))
+        }
+    }
+}
+
 struct QuickLaunchGrid: View {
     let onLaunch: (QuickLaunchItem) -> Void
     private let items = QuickLaunchItem.loadItems()
@@ -29,8 +46,7 @@ private struct QuickLaunchCard: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                Image(systemName: item.icon)
-                    .font(.system(size: 20, weight: .medium))
+                QuickLaunchIcon(item: item, size: 20)
                     .foregroundStyle(item.displayColor)
 
                 VStack(spacing: 2) {

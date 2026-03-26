@@ -5,8 +5,9 @@ struct QuickLaunchItem: Identifiable, Codable, Equatable {
     var name: String
     var command: String
     var arguments: String
-    var icon: String
+    var icon: String          // SF Symbol name OR asset image name
     var color: String
+    var isCustomImage: Bool = false  // true = asset catalog image, false = SF Symbol
 
     var isPlainTerminal: Bool { command.isEmpty }
 
@@ -33,18 +34,20 @@ struct QuickLaunchItem: Identifiable, Codable, Equatable {
             color: "gray"
         ),
         QuickLaunchItem(
-            name: "Claude Code",
+            name: "Claude",
             command: "claude",
             arguments: "",
-            icon: "sparkle",
-            color: "orange"
+            icon: "ClaudeLogo",
+            color: "orange",
+            isCustomImage: true
         ),
         QuickLaunchItem(
             name: "Codex",
             command: "codex",
             arguments: "",
-            icon: "wand.and.stars",
-            color: "green"
+            icon: "OpenAILogo",
+            color: "green",
+            isCustomImage: true
         ),
     ]
 

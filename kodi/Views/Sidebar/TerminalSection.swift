@@ -34,8 +34,7 @@ struct QuickLaunchBar: View {
                     viewModel.launchQuickItem(item)
                 } label: {
                     VStack(spacing: 2) {
-                        Image(systemName: item.icon)
-                            .font(.system(size: 13, weight: .medium))
+                        QuickLaunchIcon(item: item, size: 13)
                         Text(item.name)
                             .font(.system(size: 9, weight: .medium))
                             .lineLimit(1)
