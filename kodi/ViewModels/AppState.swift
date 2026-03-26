@@ -5,7 +5,9 @@ final class AppState {
     var repositories: [GitRepository] = []
     var selectedRepositoryID: UUID?
     var repositoryViewModels: [UUID: RepositoryViewModel] = [:]
-    var groupByFolder: Bool = true
+    var groupByFolder: Bool {
+        didSet { UserDefaults.standard.set(groupByFolder, forKey: "groupByFolder") }
+    }
 
     private let fileWatcher = FileWatcherService()
     private let gitService = GitService()
@@ -20,6 +22,7 @@ final class AppState {
     }
 
     init() {
+        self.groupByFolder = UserDefaults.standard.object(forKey: "groupByFolder") as? Bool ?? true
         fileWatcher.onChange = { [weak self] url in
             guard let self else { return }
             // Find the repository for this URL and refresh it

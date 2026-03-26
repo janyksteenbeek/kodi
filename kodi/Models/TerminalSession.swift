@@ -22,13 +22,17 @@ final class TerminalSession: Identifiable {
     func startProcess() {
         let tv = LocalProcessTerminalView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
 
-        tv.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        let fontSize = UserDefaults.standard.double(forKey: "terminalFontSize")
+        tv.font = NSFont.monospacedSystemFont(ofSize: fontSize > 0 ? fontSize : 13, weight: .regular)
 
         let handler = TerminalDelegateHandler(session: self)
         tv.processDelegate = handler
         self.delegateHandler = handler
 
-        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+        let customShell = UserDefaults.standard.string(forKey: "terminalShell") ?? ""
+        let shell = customShell.isEmpty
+            ? (ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh")
+            : customShell
 
         var env = ProcessInfo.processInfo.environment
         env["TERM"] = "xterm-256color"
@@ -44,6 +48,16 @@ final class TerminalSession: Identifiable {
         )
 
         self.terminalView = tv
+    }
+
+    func startProcess(initialCommand: String) {
+        startProcess()
+        guard !initialCommand.isEmpty, let tv = terminalView else { return }
+        // Send the command after a brief delay to let the shell initialize
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            let cmdBytes = Array((initialCommand + "\n").utf8)
+            tv.send(cmdBytes)
+        }
     }
 
     func terminate() {

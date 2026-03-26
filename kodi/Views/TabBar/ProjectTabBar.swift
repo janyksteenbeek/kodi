@@ -12,14 +12,10 @@ struct ProjectTabBar: View {
                         isSelected: repo.id == appState.selectedRepositoryID,
                         changedCount: appState.repositoryViewModels[repo.id]?.changedFiles.count ?? 0,
                         onSelect: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                appState.selectedRepositoryID = repo.id
-                            }
+                            appState.selectedRepositoryID = repo.id
                         },
                         onClose: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                appState.removeRepository(id: repo.id)
-                            }
+                            appState.removeRepository(id: repo.id)
                         }
                     )
                 }

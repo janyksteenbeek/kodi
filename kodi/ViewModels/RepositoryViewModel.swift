@@ -12,7 +12,7 @@ final class RepositoryViewModel: Identifiable {
     var isLoading: Bool = false
     var isSyncing: Bool = false
     var error: String?
-    var diffMode: DiffMode = .unified
+    var diffMode: DiffMode
     var hasRemote: Bool = false
     var commitsAhead: Int = 0
     var commitsBehind: Int = 0
@@ -20,7 +20,7 @@ final class RepositoryViewModel: Identifiable {
     var terminalSessions: [TerminalSession] = []
     private var terminalCounter: Int = 0
     var isTerminalPanelVisible: Bool = false
-    var terminalPanelMode: TerminalPanelMode = .bottom
+    var terminalPanelMode: TerminalPanelMode
     var panelTerminalID: UUID?
 
     private let gitService: GitService
@@ -53,6 +53,12 @@ final class RepositoryViewModel: Identifiable {
         self.id = repository.id
         self.repository = repository
         self.gitService = gitService
+
+        let savedDiffMode = UserDefaults.standard.string(forKey: "defaultDiffMode") ?? "unified"
+        self.diffMode = DiffMode(rawValue: savedDiffMode == "sideBySide" ? "Side by Side" : "Unified") ?? .unified
+
+        let savedPanelMode = UserDefaults.standard.string(forKey: "defaultTerminalPanelMode") ?? "bottom"
+        self.terminalPanelMode = TerminalPanelMode(rawValue: savedPanelMode == "right" ? "Right" : "Bottom") ?? .bottom
     }
 
     var stagedFiles: [ChangedFile] {
@@ -171,6 +177,23 @@ final class RepositoryViewModel: Identifiable {
         session.startProcess()
         terminalSessions.append(session)
         selectedFilePath = Self.terminalTagPrefix + session.id.uuidString
+    }
+
+    func launchQuickItem(_ item: QuickLaunchItem) {
+        terminalCounter += 1
+        let session = TerminalSession(
+            title: item.name,
+            workingDirectory: repository.path
+        )
+        let fullCommand = item.arguments.isEmpty ? item.command : "\(item.command) \(item.arguments)"
+        if item.isPlainTerminal {
+            session.startProcess()
+        } else {
+            session.startProcess(initialCommand: fullCommand)
+        }
+        terminalSessions.append(session)
+        panelTerminalID = session.id
+        isTerminalPanelVisible = true
     }
 
     func createTerminalInPanel() {

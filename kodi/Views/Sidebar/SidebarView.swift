@@ -48,7 +48,9 @@ struct SidebarView: View {
                     }
                 }
                 .listStyle(.sidebar)
-                .id(repo.id)
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    QuickLaunchBar(viewModel: vm)
+                }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     CommitView(viewModel: vm)
                 }

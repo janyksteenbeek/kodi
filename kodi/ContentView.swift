@@ -30,9 +30,7 @@ private struct DetailContentView: View {
 
     var body: some View {
         if viewModel.isTerminalPanelVisible, viewModel.panelTerminal != nil {
-            GeometryReader { geo in
-                splitLayout(in: geo.size)
-            }
+            splitLayout
         } else {
             mainContent
         }
@@ -48,26 +46,24 @@ private struct DetailContentView: View {
         }
     }
 
-    @ViewBuilder
-    private func splitLayout(in size: CGSize) -> some View {
+    private var splitLayout: some View {
         let isRight = viewModel.terminalPanelMode == .right
+        let layout = isRight
+            ? AnyLayout(HStackLayout(spacing: 0))
+            : AnyLayout(VStackLayout(spacing: 0))
 
-        if isRight {
-            HStack(spacing: 0) {
-                mainContent
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                SplitDivider(isHorizontal: true, panelSize: $panelSize, containerSize: size.width)
-                TerminalPanelView(viewModel: viewModel)
-                    .frame(width: panelSize, alignment: .leading)
-            }
-        } else {
-            VStack(spacing: 0) {
-                mainContent
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                SplitDivider(isHorizontal: false, panelSize: $panelSize, containerSize: size.height)
-                TerminalPanelView(viewModel: viewModel)
-                    .frame(height: panelSize, alignment: .top)
-            }
+        return layout {
+            mainContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .layoutPriority(1)
+
+            SplitDivider(isHorizontal: isRight, panelSize: $panelSize)
+
+            TerminalPanelView(viewModel: viewModel)
+                .frame(
+                    width: isRight ? panelSize : nil,
+                    height: isRight ? nil : panelSize
+                )
         }
     }
 }
@@ -75,50 +71,33 @@ private struct DetailContentView: View {
 private struct SplitDivider: View {
     let isHorizontal: Bool
     @Binding var panelSize: CGFloat
-    let containerSize: CGFloat
 
     var body: some View {
-        ZStack {
-            if isHorizontal {
-                Color.clear
-                    .frame(width: 9)
-                    .contentShape(Rectangle())
-                    .overlay(
-                        Rectangle()
-                            .fill(Color(nsColor: .separatorColor))
-                            .frame(width: 1)
-                    )
-            } else {
-                Color.clear
-                    .frame(height: 9)
-                    .contentShape(Rectangle())
-                    .overlay(
-                        Rectangle()
-                            .fill(Color(nsColor: .separatorColor))
-                            .frame(height: 1)
-                    )
-            }
-        }
-        .onHover { hovering in
-            if hovering {
-                if isHorizontal {
-                    NSCursor.resizeLeftRight.push()
+        Rectangle()
+            .fill(Color(nsColor: .separatorColor))
+            .frame(
+                width: isHorizontal ? 1 : nil,
+                height: isHorizontal ? nil : 1
+            )
+            .padding(isHorizontal ? .horizontal : .vertical, -4)
+            .frame(
+                width: isHorizontal ? 9 : nil,
+                height: isHorizontal ? nil : 9
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                if hovering {
+                    (isHorizontal ? NSCursor.resizeLeftRight : NSCursor.resizeUpDown).push()
                 } else {
-                    NSCursor.resizeUpDown.push()
+                    NSCursor.pop()
                 }
-            } else {
-                NSCursor.pop()
             }
-        }
-        .gesture(
-            DragGesture(minimumDistance: 1)
-                .onChanged { value in
-                    let delta = isHorizontal ? -value.translation.width : -value.translation.height
-                    let newSize = panelSize + delta
-                    let minSize: CGFloat = 120
-                    let maxSize = containerSize * 0.75
-                    panelSize = min(max(newSize, minSize), maxSize)
-                }
-        )
+            .gesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { value in
+                        let delta = isHorizontal ? -value.translation.width : -value.translation.height
+                        panelSize = min(max(panelSize + delta, 120), 600)
+                    }
+            )
     }
 }

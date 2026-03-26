@@ -42,5 +42,9 @@ struct kodiApp: App {
                 }
             }
         }
+
+        Settings {
+            SettingsView()
+        }
     }
 }

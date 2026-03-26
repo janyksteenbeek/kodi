@@ -8,18 +8,27 @@ struct DiffContentView: View {
             if viewModel.currentDiff.isEmpty {
                 if viewModel.isLoading {
                     ProgressView("Loading…")
-                } else if viewModel.changedFiles.isEmpty {
-                    ContentUnavailableView(
-                        "No Changes",
-                        systemImage: "checkmark.circle",
-                        description: Text("Working tree is clean")
-                    )
                 } else {
-                    ContentUnavailableView(
-                        "Select a File",
-                        systemImage: "doc.text.magnifyingglass",
-                        description: Text("Choose a changed file from the sidebar to view its diff")
-                    )
+                    VStack(spacing: 24) {
+                        if viewModel.changedFiles.isEmpty {
+                            ContentUnavailableView(
+                                "No Changes",
+                                systemImage: "checkmark.circle",
+                                description: Text("Working tree is clean")
+                            )
+                        } else {
+                            ContentUnavailableView(
+                                "Select a File",
+                                systemImage: "doc.text.magnifyingglass",
+                                description: Text("Choose a changed file from the sidebar to view its diff")
+                            )
+                        }
+
+                        QuickLaunchGrid { item in
+                            viewModel.launchQuickItem(item)
+                        }
+                        .padding(.bottom, 30)
+                    }
                 }
             } else {
                 ScrollView {
