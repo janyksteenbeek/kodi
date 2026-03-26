@@ -75,23 +75,25 @@ final class TerminalSession: Identifiable {
         }
     }
 
+    private var isTrackingEnabled: Bool {
+        UserDefaults.standard.object(forKey: "terminalActivityTracking") as? Bool ?? true
+    }
+
     func markActivity() {
-        guard program != .shell else { return }
+        guard program != .shell, isTrackingEnabled else { return }
         if activityState == .loading { return }
         activityState = .busy
         resetActivityTimer()
     }
 
     func markTitleChanged() {
-        guard program != .shell else { return }
+        guard program != .shell, isTrackingEnabled else { return }
         if activityState == .loading {
-            // Program set its title — loading is done
             loadingTimer?.invalidate()
             loadingTimer = nil
             activityState = .busy
             resetActivityTimer()
         } else {
-            // Title change after loading = program is doing something
             activityState = .busy
             resetActivityTimer()
         }
@@ -99,7 +101,8 @@ final class TerminalSession: Identifiable {
 
     private func resetActivityTimer() {
         activityTimer?.invalidate()
-        activityTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false) { [weak self] _ in
+        let timeout = UserDefaults.standard.object(forKey: "terminalIdleTimeout") as? Double ?? 2.0
+        activityTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
             DispatchQueue.main.async {
                 guard let self, self.activityState == .busy else { return }
                 self.activityState = .idle

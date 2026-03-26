@@ -47,6 +47,8 @@ private struct GeneralSettingsTab: View {
 private struct TerminalSettingsTab: View {
     @AppStorage("terminalFontSize") private var terminalFontSize = 13.0
     @AppStorage("terminalShell") private var terminalShell = ""
+    @AppStorage("terminalActivityTracking") private var activityTracking = true
+    @AppStorage("terminalIdleTimeout") private var idleTimeout = 2.0
 
     private let availableShells = [
         ("", "System Default"),
@@ -80,6 +82,27 @@ private struct TerminalSettingsTab: View {
                     Text("Using system shell: \(systemShell)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Activity Detection") {
+                Toggle("Track program activity", isOn: $activityTracking)
+                Text("Shows loading, busy and idle indicators for Claude, Codex and other tools.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if activityTracking {
+                    HStack {
+                        Text("Idle timeout")
+                        Spacer()
+                        TextField("", value: $idleTimeout, format: .number)
+                            .frame(width: 40)
+                            .multilineTextAlignment(.trailing)
+                        Stepper("", value: $idleTimeout, in: 1...15, step: 0.5)
+                            .labelsHidden()
+                        Text("sec")
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
