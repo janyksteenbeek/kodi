@@ -114,6 +114,7 @@ private struct GitSettingsTab: View {
 private struct ViewSettingsTab: View {
     @AppStorage("defaultDiffMode") private var defaultDiffMode = "unified"
     @AppStorage("defaultTerminalPanelMode") private var defaultTerminalPanelMode = "bottom"
+    @AppStorage("primaryPanel") private var primaryPanel = "terminal"
     @AppStorage("groupByFolder") private var groupByFolder = true
 
     var body: some View {
@@ -129,6 +130,10 @@ private struct ViewSettingsTab: View {
                 Picker("Default Position", selection: $defaultTerminalPanelMode) {
                     Label("Bottom", systemImage: "rectangle.split.1x2").tag("bottom")
                     Label("Right", systemImage: "rectangle.split.2x1").tag("right")
+                }
+                Picker("Primary Panel", selection: $primaryPanel) {
+                    Label("Diff", systemImage: "doc.text").tag("diff")
+                    Label("Terminal", systemImage: "terminal").tag("terminal")
                 }
             }
 

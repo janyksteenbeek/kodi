@@ -26,7 +26,10 @@ struct ContentView: View {
 
 private struct DetailContentView: View {
     @Bindable var viewModel: RepositoryViewModel
+    @AppStorage("primaryPanel") private var primaryPanel = "terminal"
     @State private var panelSize: CGFloat = 250
+
+    private var terminalIsPrimary: Bool { primaryPanel == "terminal" }
 
     var body: some View {
         if viewModel.isTerminalPanelVisible, viewModel.panelTerminal != nil {
@@ -52,14 +55,22 @@ private struct DetailContentView: View {
             ? AnyLayout(HStackLayout(spacing: 0))
             : AnyLayout(VStackLayout(spacing: 0))
 
+        let primaryView = terminalIsPrimary
+            ? AnyView(TerminalPanelView(viewModel: viewModel))
+            : AnyView(mainContent)
+
+        let secondaryView = terminalIsPrimary
+            ? AnyView(mainContent)
+            : AnyView(TerminalPanelView(viewModel: viewModel))
+
         return layout {
-            mainContent
+            primaryView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .layoutPriority(1)
 
             SplitDivider(isHorizontal: isRight, panelSize: $panelSize)
 
-            TerminalPanelView(viewModel: viewModel)
+            secondaryView
                 .frame(
                     width: isRight ? panelSize : nil,
                     height: isRight ? nil : panelSize
