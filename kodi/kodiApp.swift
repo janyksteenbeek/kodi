@@ -10,7 +10,7 @@ struct kodiApp: App {
                 .environment(appState)
         }
         .windowStyle(.automatic)
-        .windowToolbarStyle(.unifiedCompact)
+        .windowToolbarStyle(.unified)
         .defaultSize(width: 1100, height: 700)
         .commands {
             CommandGroup(after: .newItem) {
@@ -25,6 +25,20 @@ struct kodiApp: App {
                         Task { await vm.refresh() }
                     }
                     .keyboardShortcut("r", modifiers: .command)
+
+                    let allStaged = vm.changedFiles.allSatisfy(\.isStaged)
+                    Button(allStaged ? "Unstage All" : "Stage All") {
+                        vm.setStaging(!allStaged, for: vm.changedFiles)
+                    }
+                    .keyboardShortcut("a", modifiers: [.command, .shift])
+                    .disabled(vm.changedFiles.isEmpty)
+
+                    Divider()
+
+                    Button("New Terminal") {
+                        vm.createTerminal()
+                    }
+                    .keyboardShortcut("t", modifiers: [.control, .shift])
                 }
             }
         }

@@ -22,23 +22,30 @@ struct SidebarView: View {
                 List(selection: Binding(
                     get: { vm.selectedFilePath },
                     set: { newValue in
-                        guard let value = newValue else { return }
-                        vm.selectedFilePath = value
+                        vm.selectedFilePath = newValue
 
-                        if value == RepositoryViewModel.allChangesTag {
-                            Task { await vm.selectFiles(vm.changedFiles) }
-                        } else if value.hasPrefix(RepositoryViewModel.folderTagPrefix) {
-                            let folderId = String(value.dropFirst(RepositoryViewModel.folderTagPrefix.count))
-                            let tree = FileTreeNode.buildTree(from: vm.changedFiles)
-                            if let folderFiles = findFolderFiles(folderId, in: tree) {
-                                Task { await vm.selectFiles(folderFiles) }
+                        if let value = newValue {
+                            if value.hasPrefix(RepositoryViewModel.terminalTagPrefix) {
+                                // Terminal selected — no diff loading needed
+                            } else if value.hasPrefix(RepositoryViewModel.folderTagPrefix) {
+                                let folderId = String(value.dropFirst(RepositoryViewModel.folderTagPrefix.count))
+                                let tree = FileTreeNode.buildTree(from: vm.changedFiles)
+                                if let folderFiles = findFolderFiles(folderId, in: tree) {
+                                    Task { await vm.selectFiles(folderFiles) }
+                                }
+                            } else if let file = vm.changedFiles.first(where: { $0.path == value }) {
+                                Task { await vm.selectFile(file) }
                             }
-                        } else if let file = vm.changedFiles.first(where: { $0.path == value }) {
-                            Task { await vm.selectFile(file) }
+                        } else {
+                            Task { await vm.selectFiles(vm.changedFiles) }
                         }
                     }
                 )) {
-                    RepositorySection(viewModel: vm)
+                    TerminalSection(viewModel: vm)
+
+                    Section("Changes") {
+                        RepositorySection(viewModel: vm)
+                    }
                 }
                 .listStyle(.sidebar)
                 .id(repo.id)
@@ -62,9 +69,25 @@ struct SidebarView: View {
                 }
             }
             ToolbarItem(placement: .primaryAction) {
-                if let vm = appState.selectedViewModel {
+                if let vm = appState.selectedViewModel, !vm.changedFiles.isEmpty {
+                    let allStaged = vm.changedFiles.allSatisfy(\.isStaged)
+                    Button {
+                        vm.setStaging(!allStaged, for: vm.changedFiles)
+                    } label: {
+                        Label(
+                            allStaged ? "Unstage All" : "Stage All",
+                            systemImage: allStaged ? "square" : "checkmark.square.fill"
+                        )
+                    }
+                    .help(allStaged ? "Unstage all files" : "Stage all files")
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                if appState.selectedViewModel != nil {
                     Menu {
-                        Button(action: { Task { await vm.refresh() } }) {
+                        Button(action: {
+                            Task { await appState.selectedViewModel?.refresh() }
+                        }) {
                             Label("Refresh", systemImage: "arrow.clockwise")
                         }
                         Button {

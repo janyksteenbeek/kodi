@@ -17,6 +17,12 @@ final class RepositoryViewModel: Identifiable {
     var commitsAhead: Int = 0
     var commitsBehind: Int = 0
 
+    var terminalSessions: [TerminalSession] = []
+    private var terminalCounter: Int = 0
+    var isTerminalPanelVisible: Bool = false
+    var terminalPanelMode: TerminalPanelMode = .bottom
+    var panelTerminalID: UUID?
+
     private let gitService: GitService
 
     enum DiffMode: String, CaseIterable {
@@ -27,6 +33,18 @@ final class RepositoryViewModel: Identifiable {
             switch self {
             case .unified: "text.alignleft"
             case .sideBySide: "rectangle.split.2x1"
+            }
+        }
+    }
+
+    enum TerminalPanelMode: String, CaseIterable {
+        case bottom = "Bottom"
+        case right = "Right"
+
+        var icon: String {
+            switch self {
+            case .bottom: "rectangle.split.1x2"
+            case .right: "rectangle.split.2x1"
             }
         }
     }
@@ -54,20 +72,37 @@ final class RepositoryViewModel: Identifiable {
         error = nil
         do {
             changedFiles = try await gitService.status(at: repository.path)
-            // Reload diff for selected file if still present
             if let path = selectedFilePath {
                 if changedFiles.contains(where: { $0.path == path }) {
                     await loadDiff(for: path)
                 } else {
                     selectedFilePath = nil
-                    currentDiff = []
+                    await loadAllDiffs()
                 }
+            } else {
+                await loadAllDiffs()
             }
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
         await refreshRemoteStatus()
+    }
+
+    private func loadAllDiffs() async {
+        var allDiffs: [DiffResult] = []
+        for file in changedFiles {
+            do {
+                let rawDiff: String
+                if file.status == .untracked {
+                    rawDiff = try await gitService.diffUntrackedFile(at: repository.path, file: file.path)
+                } else {
+                    rawDiff = try await gitService.diffForFile(at: repository.path, file: file.path, staged: file.isStaged)
+                }
+                allDiffs.append(contentsOf: DiffParser.parse(rawDiff))
+            } catch { }
+        }
+        currentDiff = allDiffs
     }
 
     func push() async {
@@ -105,6 +140,86 @@ final class RepositoryViewModel: Identifiable {
 
     static let allChangesTag = "__all__"
     static let folderTagPrefix = "__folder__:"
+    static let terminalTagPrefix = "__terminal__:"
+
+    var panelTerminal: TerminalSession? {
+        if let id = panelTerminalID {
+            return terminalSessions.first { $0.id == id } ?? terminalSessions.first
+        }
+        return terminalSessions.first
+    }
+
+    var isTerminalSelected: Bool {
+        guard let sel = selectedFilePath else { return false }
+        return sel.hasPrefix(Self.terminalTagPrefix)
+    }
+
+    var selectedTerminal: TerminalSession? {
+        guard let sel = selectedFilePath,
+              sel.hasPrefix(Self.terminalTagPrefix) else { return nil }
+        let idStr = String(sel.dropFirst(Self.terminalTagPrefix.count))
+        guard let uuid = UUID(uuidString: idStr) else { return nil }
+        return terminalSessions.first { $0.id == uuid }
+    }
+
+    func createTerminal() {
+        terminalCounter += 1
+        let session = TerminalSession(
+            title: "Terminal \(terminalCounter)",
+            workingDirectory: repository.path
+        )
+        session.startProcess()
+        terminalSessions.append(session)
+        selectedFilePath = Self.terminalTagPrefix + session.id.uuidString
+    }
+
+    func createTerminalInPanel() {
+        terminalCounter += 1
+        let session = TerminalSession(
+            title: "Terminal \(terminalCounter)",
+            workingDirectory: repository.path
+        )
+        session.startProcess()
+        terminalSessions.append(session)
+        panelTerminalID = session.id
+        isTerminalPanelVisible = true
+    }
+
+    func showInPanel(_ session: TerminalSession) {
+        panelTerminalID = session.id
+        isTerminalPanelVisible = true
+    }
+
+    func closeTerminal(_ session: TerminalSession) {
+        session.terminate()
+        let wasPanel = panelTerminalID == session.id
+        terminalSessions.removeAll { $0.id == session.id }
+        if selectedFilePath == Self.terminalTagPrefix + session.id.uuidString {
+            selectedFilePath = nil
+        }
+        if wasPanel {
+            panelTerminalID = terminalSessions.first?.id
+            if terminalSessions.isEmpty {
+                isTerminalPanelVisible = false
+            }
+        }
+    }
+
+    func toggleTerminalPanel() {
+        isTerminalPanelVisible.toggle()
+        if isTerminalPanelVisible && terminalSessions.isEmpty {
+            createTerminalInPanel()
+        }
+    }
+
+    func terminateAllTerminals() {
+        for session in terminalSessions {
+            session.terminate()
+        }
+        terminalSessions.removeAll()
+        isTerminalPanelVisible = false
+        panelTerminalID = nil
+    }
 
     func selectFile(_ file: ChangedFile) async {
         selectedFilePath = file.path

@@ -28,30 +28,22 @@ private struct FolderNodeView: View {
                 FileTreeNodeView(node: child, viewModel: viewModel)
             }
         } label: {
-            HStack(spacing: 6) {
-                Toggle("", isOn: Binding(
-                    get: { allStaged },
-                    set: { newValue in viewModel.setStaging(newValue, for: allFiles) }
-                ))
-                .toggleStyle(.checkbox)
-                .labelsHidden()
-
-                Image(systemName: isExpanded ? "folder.fill" : "folder")
-                    .foregroundStyle(.secondary)
-                    .frame(width: 16)
-
-                Text(node.name)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .help(node.name)
-
-                Spacer()
-
-                Text("\(node.fileCount)")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .monospacedDigit()
+            Toggle(isOn: Binding(
+                get: { allStaged },
+                set: { newValue in viewModel.setStaging(newValue, for: allFiles) }
+            )) {
+                Label {
+                    Text(node.name)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(node.name)
+                } icon: {
+                    Image(systemName: isExpanded ? "folder.fill" : "folder")
+                        .foregroundStyle(.secondary)
+                }
             }
+            .toggleStyle(.checkbox)
+            .badge(node.fileCount)
             .tag(RepositoryViewModel.folderTagPrefix + node.id)
         }
     }

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A601C9DD2F75A3590010F515 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = A6CFE1112F74830000D3DEFF /* SwiftTerm */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		A6CFE0FB2F74829D00D3DEFF /* kodi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = kodi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A601C9DD2F75A3590010F515 /* SwiftTerm in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = kodi;
 			packageProductDependencies = (
+				A6CFE1112F74830000D3DEFF /* SwiftTerm */,
 			);
 			productName = kodi;
 			productReference = A6CFE0FB2F74829D00D3DEFF /* kodi.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = A6CFE0F22F74829D00D3DEFF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A6CFE1102F74830000D3DEFF /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A6CFE0FC2F74829D00D3DEFF /* Products */;
 			projectDirPath = "";
@@ -329,6 +338,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A6CFE1102F74830000D3DEFF /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A6CFE1112F74830000D3DEFF /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A6CFE1102F74830000D3DEFF /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A6CFE0F32F74829D00D3DEFF /* Project object */;
 }

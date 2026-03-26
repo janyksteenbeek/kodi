@@ -6,8 +6,14 @@ struct DiffContentView: View {
     var body: some View {
         Group {
             if viewModel.currentDiff.isEmpty {
-                if viewModel.selectedFilePath != nil && viewModel.isLoading {
-                    ProgressView("Loading diff…")
+                if viewModel.isLoading {
+                    ProgressView("Loading…")
+                } else if viewModel.changedFiles.isEmpty {
+                    ContentUnavailableView(
+                        "No Changes",
+                        systemImage: "checkmark.circle",
+                        description: Text("Working tree is clean")
+                    )
                 } else {
                     ContentUnavailableView(
                         "Select a File",
@@ -49,32 +55,34 @@ struct DiffContentView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+
+                Button {
+                    viewModel.toggleTerminalPanel()
+                } label: {
+                    Label("Terminal", systemImage: "terminal")
+                }
+                .help(viewModel.isTerminalPanelVisible ? "Hide Terminal" : "Show Terminal")
             }
         }
         .navigationTitle(navigationTitle)
         .navigationSubtitle(navigationSubtitle)
     }
 
-    private var isMultiFile: Bool {
-        guard let sel = viewModel.selectedFilePath else { return false }
-        return sel == RepositoryViewModel.allChangesTag || sel.hasPrefix(RepositoryViewModel.folderTagPrefix)
-    }
-
     private var navigationTitle: String {
-        if let sel = viewModel.selectedFilePath {
-            if sel == RepositoryViewModel.allChangesTag {
-                return "All Changes"
-            }
-            if sel.hasPrefix(RepositoryViewModel.folderTagPrefix) {
-                return String(sel.dropFirst(RepositoryViewModel.folderTagPrefix.count))
-            }
+        if let sel = viewModel.selectedFilePath,
+           sel.hasPrefix(RepositoryViewModel.folderTagPrefix) {
+            return String(sel.dropFirst(RepositoryViewModel.folderTagPrefix.count))
         }
         return viewModel.selectedFile?.fileName ?? viewModel.repository.displayName
     }
 
     private var navigationSubtitle: String {
-        if isMultiFile {
-            return "\(viewModel.currentDiff.count) file\(viewModel.currentDiff.count == 1 ? "" : "s")"
+        if viewModel.selectedFilePath == nil {
+            return "\(viewModel.currentDiff.count) changed file\(viewModel.currentDiff.count == 1 ? "" : "s")"
+        }
+        if let sel = viewModel.selectedFilePath,
+           sel.hasPrefix(RepositoryViewModel.folderTagPrefix) {
+            return ""
         }
         return viewModel.selectedFile?.directory ?? ""
     }

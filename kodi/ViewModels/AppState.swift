@@ -76,6 +76,7 @@ final class AppState {
             fileWatcher.unwatch(directory: repo.path)
             repo.path.stopAccessingSecurityScopedResource()
         }
+        repositoryViewModels[id]?.terminateAllTerminals()
         repositories.removeAll { $0.id == id }
         repositoryViewModels.removeValue(forKey: id)
         if selectedRepositoryID == id {
