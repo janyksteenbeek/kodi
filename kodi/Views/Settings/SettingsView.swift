@@ -113,9 +113,11 @@ private struct GitSettingsTab: View {
 
 private struct ViewSettingsTab: View {
     @AppStorage("defaultDiffMode") private var defaultDiffMode = "unified"
-    @AppStorage("defaultTerminalPanelMode") private var defaultTerminalPanelMode = "bottom"
+    @AppStorage("defaultTerminalPanelMode") private var defaultTerminalPanelMode = "right"
     @AppStorage("primaryPanel") private var primaryPanel = "terminal"
+    @AppStorage("terminalClickAction") private var terminalClickAction = "panel"
     @AppStorage("groupByFolder") private var groupByFolder = true
+    @AppStorage("terminalSplitRatio") private var terminalSplitRatio = 0.5
 
     var body: some View {
         Form {
@@ -134,6 +136,10 @@ private struct ViewSettingsTab: View {
                 Picker("Primary Panel", selection: $primaryPanel) {
                     Label("Diff", systemImage: "doc.text").tag("diff")
                     Label("Terminal", systemImage: "terminal").tag("terminal")
+                }
+                Picker("Terminal Click Action", selection: $terminalClickAction) {
+                    Text("Open in Panel").tag("panel")
+                    Text("Open Full Screen").tag("fullscreen")
                 }
             }
 

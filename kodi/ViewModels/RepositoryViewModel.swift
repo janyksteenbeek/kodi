@@ -58,8 +58,8 @@ final class RepositoryViewModel: Identifiable {
         let savedDiffMode = UserDefaults.standard.string(forKey: "defaultDiffMode") ?? "unified"
         self.diffMode = DiffMode(rawValue: savedDiffMode == "sideBySide" ? "Side by Side" : "Unified") ?? .unified
 
-        let savedPanelMode = UserDefaults.standard.string(forKey: "defaultTerminalPanelMode") ?? "bottom"
-        self.terminalPanelMode = TerminalPanelMode(rawValue: savedPanelMode == "right" ? "Right" : "Bottom") ?? .bottom
+        let savedPanelMode = UserDefaults.standard.string(forKey: "defaultTerminalPanelMode") ?? "right"
+        self.terminalPanelMode = TerminalPanelMode(rawValue: savedPanelMode == "right" ? "Right" : "Bottom") ?? .right
     }
 
     var stagedFiles: [ChangedFile] {

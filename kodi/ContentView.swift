@@ -16,7 +16,7 @@ struct ContentView: View {
 private struct DetailContentView: View {
     @Bindable var viewModel: RepositoryViewModel
     @AppStorage("primaryPanel") private var primaryPanel = "terminal"
-    @State private var panelSize: CGFloat = 250
+    @State private var panelRatio: CGFloat = 0.5
 
     private var terminalIsPrimary: Bool { primaryPanel == "terminal" }
 
@@ -40,9 +40,6 @@ private struct DetailContentView: View {
 
     private var splitLayout: some View {
         let isRight = viewModel.terminalPanelMode == .right
-        let layout = isRight
-            ? AnyLayout(HStackLayout(spacing: 0))
-            : AnyLayout(VStackLayout(spacing: 0))
 
         let primaryView = terminalIsPrimary
             ? AnyView(TerminalPanelView(viewModel: viewModel))
@@ -52,25 +49,34 @@ private struct DetailContentView: View {
             ? AnyView(mainContent)
             : AnyView(TerminalPanelView(viewModel: viewModel))
 
-        return layout {
-            primaryView
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .layoutPriority(1)
+        return GeometryReader { geo in
+            let layout = isRight
+                ? AnyLayout(HStackLayout(spacing: 0))
+                : AnyLayout(VStackLayout(spacing: 0))
 
-            SplitDivider(isHorizontal: isRight, panelSize: $panelSize)
+            let total = isRight ? geo.size.width : geo.size.height
+            let secondarySize = total * panelRatio
 
-            secondaryView
-                .frame(
-                    width: isRight ? panelSize : nil,
-                    height: isRight ? nil : panelSize
-                )
+            layout {
+                primaryView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                SplitDivider(isHorizontal: isRight, panelRatio: $panelRatio, containerSize: total)
+
+                secondaryView
+                    .frame(
+                        width: isRight ? secondarySize : nil,
+                        height: isRight ? nil : secondarySize
+                    )
+            }
         }
     }
 }
 
 private struct SplitDivider: View {
     let isHorizontal: Bool
-    @Binding var panelSize: CGFloat
+    @Binding var panelRatio: CGFloat
+    let containerSize: CGFloat
 
     var body: some View {
         Rectangle()
@@ -96,7 +102,8 @@ private struct SplitDivider: View {
                 DragGesture(minimumDistance: 1)
                     .onChanged { value in
                         let delta = isHorizontal ? -value.translation.width : -value.translation.height
-                        panelSize = min(max(panelSize + delta, 120), 600)
+                        let ratioDelta = delta / containerSize
+                        panelRatio = min(max(panelRatio + ratioDelta, 0.15), 0.85)
                     }
             )
     }

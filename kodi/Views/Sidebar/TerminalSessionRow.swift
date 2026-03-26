@@ -3,6 +3,11 @@ import SwiftUI
 struct TerminalSessionRow: View {
     let session: TerminalSession
     @Bindable var viewModel: RepositoryViewModel
+    @AppStorage("terminalClickAction") private var terminalClickAction = "panel"
+
+    private var tag: String {
+        RepositoryViewModel.terminalTagPrefix + session.id.uuidString
+    }
 
     var body: some View {
         Label {
@@ -12,19 +17,10 @@ struct TerminalSessionRow: View {
             Image(systemName: "terminal")
                 .foregroundStyle(session.isRunning ? .green : .secondary)
         }
-        .onTapGesture(count: 2) {
-            // Double click: open full screen
-            viewModel.selectedFilePaths = [RepositoryViewModel.terminalTagPrefix + session.id.uuidString]
-            viewModel.selectedFilePath = RepositoryViewModel.terminalTagPrefix + session.id.uuidString
-        }
-        .onTapGesture(count: 1) {
-            // Single click: show in panel
-            viewModel.showInPanel(session)
-        }
+        .tag(tag)
         .contextMenu {
             Button {
-                viewModel.selectedFilePaths = [RepositoryViewModel.terminalTagPrefix + session.id.uuidString]
-                viewModel.selectedFilePath = RepositoryViewModel.terminalTagPrefix + session.id.uuidString
+                openFullScreen()
             } label: {
                 Label("Open Full Screen", systemImage: "macwindow")
             }
@@ -40,5 +36,10 @@ struct TerminalSessionRow: View {
                 Label("Close Terminal", systemImage: "xmark.circle")
             }
         }
+    }
+
+    private func openFullScreen() {
+        viewModel.selectedFilePaths = [tag]
+        viewModel.selectedFilePath = tag
     }
 }

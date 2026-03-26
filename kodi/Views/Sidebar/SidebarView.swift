@@ -20,6 +20,11 @@ struct SidebarView: View {
                 handleSelectionChange(newValue)
             }
         )) {
+            QuickLaunchBar(viewModel: viewModel)
+                .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+
             TerminalSection(viewModel: viewModel)
 
             Section {
@@ -41,9 +46,6 @@ struct SidebarView: View {
             viewModel.selectedFilePath = nil
             Task { await viewModel.selectFiles(viewModel.changedFiles) }
             return .handled
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            QuickLaunchBar(viewModel: viewModel)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             CommitView(viewModel: viewModel)
@@ -85,9 +87,18 @@ struct SidebarView: View {
             return
         }
 
-        // Single terminal selected
+        // Single terminal selected — respect click action setting
         if selection.count == 1, let single = selection.first,
            single.hasPrefix(RepositoryViewModel.terminalTagPrefix) {
+            let clickAction = UserDefaults.standard.string(forKey: "terminalClickAction") ?? "panel"
+            if clickAction == "panel" {
+                let idStr = String(single.dropFirst(RepositoryViewModel.terminalTagPrefix.count))
+                if let uuid = UUID(uuidString: idStr),
+                   let session = viewModel.terminalSessions.first(where: { $0.id == uuid }) {
+                    viewModel.showInPanel(session)
+                }
+            }
+            // "fullscreen" uses the default List selection behavior
             return
         }
 
