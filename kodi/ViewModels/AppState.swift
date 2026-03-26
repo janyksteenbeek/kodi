@@ -3,7 +3,6 @@ import SwiftUI
 @Observable
 final class AppState {
     var repositories: [GitRepository] = []
-    var selectedRepositoryID: UUID?
     var repositoryViewModels: [UUID: RepositoryViewModel] = [:]
     var groupByFolder: Bool {
         didSet { UserDefaults.standard.set(groupByFolder, forKey: "groupByFolder") }
@@ -12,20 +11,13 @@ final class AppState {
     private let fileWatcher = FileWatcherService()
     private let gitService = GitService()
 
-    var selectedRepository: GitRepository? {
-        repositories.first { $0.id == selectedRepositoryID }
-    }
-
-    var selectedViewModel: RepositoryViewModel? {
-        guard let id = selectedRepositoryID else { return nil }
-        return repositoryViewModels[id]
-    }
+    // Callback for opening new tabs — set by the root view
+    var openRepositoryTab: ((UUID) -> Void)?
 
     init() {
         self.groupByFolder = UserDefaults.standard.object(forKey: "groupByFolder") as? Bool ?? true
         fileWatcher.onChange = { [weak self] url in
             guard let self else { return }
-            // Find the repository for this URL and refresh it
             if let repo = repositories.first(where: { $0.path == url }),
                let vm = repositoryViewModels[repo.id] {
                 Task { await vm.refresh() }
@@ -33,7 +25,8 @@ final class AppState {
         }
     }
 
-    func loadSavedRepositories() {
+    func loadSavedRepositories() -> [UUID] {
+        var ids: [UUID] = []
         let saved = BookmarkManager.loadRepositories()
         for repo in saved {
             if let bookmarkData = repo.bookmarkData,
@@ -41,13 +34,12 @@ final class AppState {
                 _ = url.startAccessingSecurityScopedResource()
                 var resolved = repo
                 resolved.path = url
-                addRepositoryDirectly(resolved)
+                if addRepositoryDirectly(resolved) {
+                    ids.append(resolved.id)
+                }
             }
         }
-        // Select first if nothing selected
-        if selectedRepositoryID == nil {
-            selectedRepositoryID = repositories.first?.id
-        }
+        return ids
     }
 
     func addRepository() {
@@ -61,16 +53,13 @@ final class AppState {
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         Task {
-            guard await gitService.isGitRepository(at: url) else {
-                // Not a git repo — could show an alert
-                return
-            }
+            guard await gitService.isGitRepository(at: url) else { return }
 
             let bookmarkData = try? BookmarkManager.saveBookmark(for: url)
             let repo = GitRepository(path: url, bookmarkData: bookmarkData)
-            addRepositoryDirectly(repo)
-            selectedRepositoryID = repo.id
+            _ = addRepositoryDirectly(repo)
             saveRepositories()
+            openRepositoryTab?(repo.id)
         }
     }
 
@@ -82,19 +71,22 @@ final class AppState {
         repositoryViewModels[id]?.terminateAllTerminals()
         repositories.removeAll { $0.id == id }
         repositoryViewModels.removeValue(forKey: id)
-        if selectedRepositoryID == id {
-            selectedRepositoryID = repositories.first?.id
-        }
         saveRepositories()
     }
 
-    private func addRepositoryDirectly(_ repo: GitRepository) {
-        guard !repositories.contains(where: { $0.path == repo.path }) else { return }
+    func viewModel(for id: UUID) -> RepositoryViewModel? {
+        repositoryViewModels[id]
+    }
+
+    @discardableResult
+    private func addRepositoryDirectly(_ repo: GitRepository) -> Bool {
+        guard !repositories.contains(where: { $0.path == repo.path }) else { return false }
         repositories.append(repo)
         let vm = RepositoryViewModel(repository: repo, gitService: gitService)
         repositoryViewModels[repo.id] = vm
         fileWatcher.watch(directory: repo.path)
         Task { await vm.refresh() }
+        return true
     }
 
     private func saveRepositories() {

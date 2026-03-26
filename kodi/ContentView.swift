@@ -1,26 +1,15 @@
 import SwiftUI
 
 struct ContentView: View {
-    @Environment(AppState.self) private var appState
+    @Bindable var viewModel: RepositoryViewModel
 
     var body: some View {
         NavigationSplitView {
-            SidebarView()
+            SidebarView(viewModel: viewModel)
         } detail: {
-            if let vm = appState.selectedViewModel {
-                DetailContentView(viewModel: vm)
-            } else {
-                ContentUnavailableView(
-                    "Welcome to Kodi",
-                    systemImage: "arrow.triangle.branch",
-                    description: Text("Add a git repository to start viewing diffs")
-                )
-            }
+            DetailContentView(viewModel: viewModel)
         }
         .frame(minWidth: 800, minHeight: 500)
-        .task {
-            appState.loadSavedRepositories()
-        }
     }
 }
 
