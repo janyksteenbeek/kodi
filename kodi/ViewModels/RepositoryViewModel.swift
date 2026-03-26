@@ -1,5 +1,4 @@
 import SwiftUI
-
 @Observable
 final class RepositoryViewModel: Identifiable {
     let id: UUID
@@ -186,7 +185,18 @@ final class RepositoryViewModel: Identifiable {
             title: item.name,
             workingDirectory: repository.path
         )
-        let fullCommand = item.arguments.isEmpty ? item.command : "\(item.command) \(item.arguments)"
+        var args = item.arguments
+        // Append default AI args if the item has no custom args
+        if args.isEmpty {
+            let program = TerminalProgram.detect(from: item.command)
+            switch program {
+            case .claude: args = UserDefaults.standard.string(forKey: "claudeArgs") ?? ""
+            case .codex: args = UserDefaults.standard.string(forKey: "codexArgs") ?? ""
+            case .opencode: args = UserDefaults.standard.string(forKey: "opencodeArgs") ?? ""
+            case .shell: break
+            }
+        }
+        let fullCommand = args.isEmpty ? item.command : "\(item.command) \(args)"
         let program = TerminalProgram.detect(from: item.command)
         if item.isPlainTerminal {
             session.program = .shell
@@ -329,4 +339,5 @@ final class RepositoryViewModel: Identifiable {
             self.error = error.localizedDescription
         }
     }
+
 }

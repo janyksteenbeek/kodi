@@ -1,22 +1,31 @@
 import SwiftUI
+import UserNotifications
+
+private func requestNotificationPermission() {
+    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+}
 
 struct SettingsView: View {
     var body: some View {
         TabView {
             GeneralSettingsTab()
                 .tabItem { Label("General", systemImage: "gear") }
+            AppearanceSettingsTab()
+                .tabItem { Label("Appearance", systemImage: "paintbrush") }
             CodeReviewSettingsTab()
                 .tabItem { Label("Code Review", systemImage: "doc.text.magnifyingglass") }
             TerminalSettingsTab()
                 .tabItem { Label("Terminal", systemImage: "terminal") }
+            AISettingsTab()
+                .tabItem { Label("AI & Agents", systemImage: "cpu") }
             QuickLaunchSettingsTab()
                 .tabItem { Label("Quick Launch", systemImage: "sparkle") }
             GitSettingsTab()
                 .tabItem { Label("Git", systemImage: "arrow.triangle.branch") }
             ViewSettingsTab()
-                .tabItem { Label("View", systemImage: "eye") }
+                .tabItem { Label("Layout", systemImage: "rectangle.split.2x1") }
         }
-        .frame(width: 520, height: 420)
+        .frame(width: 620, height: 500)
     }
 }
 
@@ -24,9 +33,32 @@ struct SettingsView: View {
 
 private struct GeneralSettingsTab: View {
     @AppStorage("autoRefresh") private var autoRefresh = true
+    @AppStorage("reopenLastRepo") private var reopenLastRepo = true
+    @AppStorage("confirmBeforeClose") private var confirmBeforeClose = false
 
     var body: some View {
         Form {
+            Section {
+                Toggle(isOn: $reopenLastRepo) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Reopen last repositories")
+                        Text("Restore previously open repositories when launching Kodi.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Toggle(isOn: $confirmBeforeClose) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Confirm before closing")
+                        Text("Ask for confirmation when closing a repository with running terminals.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Startup & Window")
+            }
+
             Section {
                 Toggle(isOn: $autoRefresh) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -42,7 +74,7 @@ private struct GeneralSettingsTab: View {
 
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("This will remove all saved preferences and restore the app to its default state. Repositories will not be removed.")
+                    Text("Remove all saved preferences and restore defaults. Your repositories will not be affected.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Button("Reset All Settings…", role: .destructive) {
@@ -55,6 +87,190 @@ private struct GeneralSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+// MARK: - Appearance
+
+private struct AppearanceSettingsTab: View {
+    @AppStorage("appColorScheme") private var appColorScheme = "system"
+    @AppStorage("sidebarWidth") private var sidebarWidth = 260.0
+    @AppStorage("compactMode") private var compactMode = false
+    @AppStorage("showFileIcons") private var showFileIcons = true
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Appearance", selection: $appColorScheme) {
+                    Text("System").tag("system")
+                    Text("Light").tag("light")
+                    Text("Dark").tag("dark")
+                }
+            } header: {
+                Text("Theme")
+            } footer: {
+                Text("Override the system appearance for Kodi. Requires restart to take full effect.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+
+            Section {
+                Toggle(isOn: $compactMode) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Compact mode")
+                        Text("Reduce spacing and padding throughout the interface for more content density.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Toggle(isOn: $showFileIcons) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show file type icons")
+                        Text("Display colored icons based on file extension in the sidebar.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Interface")
+            }
+
+            Section {
+                HStack {
+                    Text("Default Sidebar Width")
+                    Spacer()
+                    TextField("", value: $sidebarWidth, format: .number)
+                        .frame(width: 50)
+                        .multilineTextAlignment(.trailing)
+                    Stepper("", value: $sidebarWidth, in: 200...400, step: 10)
+                        .labelsHidden()
+                    Text("pt")
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Sidebar")
+            } footer: {
+                Text("The default width of the sidebar when opening a new window.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - AI & Agents
+
+private struct AISettingsTab: View {
+    @AppStorage("aiAutoApprove") private var autoApprove = false
+    @AppStorage("aiNotifyOnComplete") private var notifyOnComplete = false
+    @AppStorage("claudeArgs") private var claudeArgs = ""
+    @AppStorage("codexArgs") private var codexArgs = ""
+    @AppStorage("opencodeArgs") private var opencodeArgs = ""
+    @State private var installedTools: [TerminalProgram] = []
+
+    var body: some View {
+        Form {
+            Section {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(TerminalProgram.aiPrograms, id: \.self) { program in
+                            HStack(spacing: 6) {
+                                Image(program.icon)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 14, height: 14)
+                                    .foregroundStyle(program.color)
+                                Text(program.displayName)
+                                    .font(.callout)
+                                Spacer()
+                                if installedTools.contains(program) {
+                                    Text("Installed")
+                                        .font(.caption)
+                                        .foregroundStyle(.green)
+                                } else {
+                                    Text("Not found")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                    }
+                }
+                Button("Detect Installed Tools") {
+                    detectTools()
+                }
+            } header: {
+                Text("Detected Tools")
+            } footer: {
+                Text("Scans your PATH for known AI coding agents. Detected tools are added to Quick Launch automatically.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+
+            Section {
+                Toggle(isOn: $notifyOnComplete) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Notify when agent finishes")
+                        Text("Show a system notification when an AI agent completes a task.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .onChange(of: notifyOnComplete) { _, enabled in
+                    if enabled { requestNotificationPermission() }
+                }
+                Toggle(isOn: $autoApprove) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Auto-approve file changes")
+                        Text("Automatically accept file modifications suggested by AI agents. Use with caution.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Behavior")
+            }
+
+            Section {
+                HStack {
+                    Image("ClaudeLogo")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 16, height: 16)
+                        .foregroundStyle(.orange)
+                    TextField("Claude arguments", text: $claudeArgs, prompt: Text("e.g. --model opus"))
+                }
+                HStack {
+                    Image("OpenAILogo")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 16, height: 16)
+                        .foregroundStyle(.green)
+                    TextField("Codex arguments", text: $codexArgs, prompt: Text("e.g. --model gpt-4"))
+                }
+                HStack {
+                    Image("OpenCodeLogo")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 16, height: 16)
+                        .foregroundStyle(.blue)
+                    TextField("OpenCode arguments", text: $opencodeArgs, prompt: Text("Optional flags"))
+                }
+            } header: {
+                Text("Default Arguments")
+            } footer: {
+                Text("These arguments are appended when launching via Quick Launch. Override per-item in Quick Launch settings.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear { detectTools() }
+    }
+
+    private func detectTools() {
+        installedTools = TerminalProgram.aiPrograms.filter { TerminalProgram.isInstalled($0) }
     }
 }
 
@@ -450,7 +666,7 @@ private struct QuickLaunchSettingsTab: View {
 
             Section {
                 Button("Restore Defaults") {
-                    items = QuickLaunchItem.defaultItems
+                    items = QuickLaunchItem.detectInstalledItems()
                     save()
                 }
                 Text("Reset quick launch items to Terminal, Claude and Codex.")

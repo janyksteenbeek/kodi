@@ -4,20 +4,17 @@ import SwiftUI
 final class AppState {
     var repositories: [GitRepository] = []
     var repositoryViewModels: [UUID: RepositoryViewModel] = [:]
-    var groupByFolder: Bool {
-        didSet { UserDefaults.standard.set(groupByFolder, forKey: "groupByFolder") }
-    }
 
     private let fileWatcher = FileWatcherService()
     private let gitService = GitService()
 
-    // Callback for opening new tabs — set by the root view
     var openRepositoryTab: ((UUID) -> Void)?
 
     init() {
-        self.groupByFolder = UserDefaults.standard.object(forKey: "groupByFolder") as? Bool ?? true
         fileWatcher.onChange = { [weak self] url in
             guard let self else { return }
+            let autoRefresh = UserDefaults.standard.object(forKey: "autoRefresh") as? Bool ?? true
+            guard autoRefresh else { return }
             if let repo = repositories.first(where: { $0.path == url }),
                let vm = repositoryViewModels[repo.id] {
                 Task { await vm.refresh() }

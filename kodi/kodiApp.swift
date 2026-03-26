@@ -141,6 +141,16 @@ private struct RepoWindowContent: View {
     @Binding var repoID: UUID?
     let appState: AppState
     @Environment(\.openWindow) private var openWindow
+    @AppStorage("appColorScheme") private var appColorScheme = "system"
+    @AppStorage("terminalOpenOnLaunch") private var terminalOpenOnLaunch = false
+
+    private var colorScheme: ColorScheme? {
+        switch appColorScheme {
+        case "light": .light
+        case "dark": .dark
+        default: nil
+        }
+    }
 
     var body: some View {
         Group {
@@ -148,10 +158,16 @@ private struct RepoWindowContent: View {
                 ContentView(viewModel: vm)
                     .focusedValue(\.repositoryViewModel, vm)
                     .navigationTitle(vm.repository.displayName)
+                    .onAppear {
+                        if terminalOpenOnLaunch && vm.terminalSessions.isEmpty {
+                            vm.createTerminalInPanel()
+                        }
+                    }
             } else {
                 WelcomeView()
             }
         }
+        .preferredColorScheme(colorScheme)
         .task {
             appState.openRepositoryTab = { [openWindow] id in
                 // Open new window, then merge it as a tab

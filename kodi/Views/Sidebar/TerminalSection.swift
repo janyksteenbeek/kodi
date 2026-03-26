@@ -28,26 +28,26 @@ struct QuickLaunchBar: View {
     private let items = QuickLaunchItem.loadItems()
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             ForEach(items) { item in
                 Button {
                     viewModel.launchQuickItem(item)
                 } label: {
-                    VStack(spacing: 2) {
-                        QuickLaunchIcon(item: item, size: 13)
+                    VStack(spacing: 1) {
+                        QuickLaunchIcon(item: item, size: 12)
                         Text(item.name)
-                            .font(.system(size: 9, weight: .medium))
+                            .font(.system(size: 8, weight: .medium))
                             .lineLimit(1)
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 40)
-                    .background(item.displayColor.opacity(0.12), in: .rect(cornerRadius: 6))
+                    .frame(height: 34)
+                    .background(item.displayColor.opacity(0.12), in: .rect(cornerRadius: 5))
                     .foregroundStyle(item.displayColor)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
     }
 }

@@ -3,9 +3,17 @@ import SwiftUI
 struct RepositorySection: View {
     @Bindable var viewModel: RepositoryViewModel
     @AppStorage("groupByFolder") private var groupByFolder = true
+    @AppStorage("showUntrackedFiles") private var showUntrackedFiles = true
+
+    private var visibleFiles: [ChangedFile] {
+        if showUntrackedFiles {
+            return viewModel.changedFiles
+        }
+        return viewModel.changedFiles.filter { $0.status != .untracked }
+    }
 
     var body: some View {
-        if viewModel.changedFiles.isEmpty {
+        if visibleFiles.isEmpty {
             if viewModel.isLoading {
                 ProgressView()
                     .controlSize(.small)
@@ -26,12 +34,12 @@ struct RepositorySection: View {
                 .padding(.vertical, 4)
             }
         } else if groupByFolder {
-            let tree = FileTreeNode.buildTree(from: viewModel.changedFiles)
+            let tree = FileTreeNode.buildTree(from: visibleFiles)
             ForEach(tree) { node in
                 FileTreeNodeView(node: node, viewModel: viewModel)
             }
         } else {
-            ForEach(viewModel.changedFiles) { file in
+            ForEach(visibleFiles) { file in
                 ChangedFileRow(file: file, viewModel: viewModel)
                     .tag(file.path)
             }

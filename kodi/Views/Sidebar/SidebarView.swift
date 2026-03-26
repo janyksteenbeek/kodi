@@ -4,6 +4,7 @@ struct SidebarView: View {
     @Bindable var viewModel: RepositoryViewModel
     @Environment(AppState.self) private var appState
     @AppStorage("groupByFolder") private var groupByFolder = true
+    @AppStorage("sidebarWidth") private var sidebarWidth = 260.0
 
     var body: some View {
         List(selection: Binding(
@@ -79,7 +80,7 @@ struct SidebarView: View {
                 }
             }
         }
-        .frame(minWidth: 260)
+        .frame(minWidth: sidebarWidth)
     }
 
     private func handleSelectionChange(_ selection: Set<String>) {

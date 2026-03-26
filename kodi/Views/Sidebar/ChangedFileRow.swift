@@ -5,6 +5,9 @@ struct ChangedFileRow: View {
     @Bindable var viewModel: RepositoryViewModel
     var showDirectory: Bool = false
 
+    @AppStorage("showFileIcons") private var showFileIcons = true
+    @AppStorage("compactMode") private var compactMode = false
+
     var body: some View {
         HStack(spacing: 6) {
             Toggle(isOn: Binding(
@@ -16,7 +19,9 @@ struct ChangedFileRow: View {
             .toggleStyle(.checkbox)
             .labelsHidden()
 
-            FileIconView(fileName: file.fileName)
+            if showFileIcons {
+                FileIconView(fileName: file.fileName)
+            }
 
             Text(file.fileName)
                 .lineLimit(1)
@@ -28,6 +33,7 @@ struct ChangedFileRow: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(file.status.color)
         }
+        .padding(.vertical, compactMode ? 0 : 1)
         .tag(file.path)
     }
 }

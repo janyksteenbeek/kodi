@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftTerm
+import UserNotifications
 
 @Observable
 final class TerminalSession: Identifiable {
@@ -159,8 +160,21 @@ private class TerminalDelegateHandler: NSObject, LocalProcessTerminalViewDelegat
 
     nonisolated func processTerminated(source: TerminalView, exitCode: Int32?) {
         MainActor.assumeIsolated {
-            session?.isRunning = false
-            session?.activityState = .idle
+            guard let session else { return }
+            session.isRunning = false
+            session.activityState = .idle
+
+            if session.program != .shell {
+                let notify = UserDefaults.standard.object(forKey: "aiNotifyOnComplete") as? Bool ?? false
+                if notify {
+                    let content = UNMutableNotificationContent()
+                    content.title = "\(session.program.displayName) Finished"
+                    content.body = "\(session.title) has completed."
+                    content.sound = .default
+                    let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+                    UNUserNotificationCenter.current().add(request)
+                }
+            }
         }
     }
 }
