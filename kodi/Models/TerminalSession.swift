@@ -9,8 +9,13 @@ final class TerminalSession: Identifiable {
     var isRunning: Bool = true
     let createdAt: Date
 
+    var program: TerminalProgram = .shell
+    var activityState: TerminalActivityState = .idle
+
     private(set) var terminalView: LocalProcessTerminalView?
     private var delegateHandler: TerminalDelegateHandler?
+    private var activityTimer: Timer?
+    private var loadingTimer: Timer?
 
     init(id: UUID = UUID(), title: String, workingDirectory: URL) {
         self.id = id
@@ -50,24 +55,72 @@ final class TerminalSession: Identifiable {
         self.terminalView = tv
     }
 
-    func startProcess(initialCommand: String) {
+    func startProcess(initialCommand: String, program: TerminalProgram = .shell) {
+        self.program = program
+        if program != .shell {
+            self.activityState = .loading
+            // Stay in loading for a fixed period — shell output during startup is noise
+            loadingTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+                DispatchQueue.main.async {
+                    guard let self, self.activityState == .loading else { return }
+                    self.activityState = .idle
+                }
+            }
+        }
         startProcess()
         guard !initialCommand.isEmpty, let tv = terminalView else { return }
-        // Send the command after a brief delay to let the shell initialize
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             let cmdBytes = Array((initialCommand + "\n").utf8)
             tv.send(cmdBytes)
         }
     }
 
+    func markActivity() {
+        guard program != .shell else { return }
+        if activityState == .loading { return }
+        activityState = .busy
+        resetActivityTimer()
+    }
+
+    func markTitleChanged() {
+        guard program != .shell else { return }
+        if activityState == .loading {
+            // Program set its title — loading is done
+            loadingTimer?.invalidate()
+            loadingTimer = nil
+            activityState = .busy
+            resetActivityTimer()
+        } else {
+            // Title change after loading = program is doing something
+            activityState = .busy
+            resetActivityTimer()
+        }
+    }
+
+    private func resetActivityTimer() {
+        activityTimer?.invalidate()
+        activityTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self, self.activityState == .busy else { return }
+                self.activityState = .idle
+            }
+        }
+    }
+
     func terminate() {
         isRunning = false
-        terminalView?.send([0x04]) // Ctrl+D to gracefully close
+        activityTimer?.invalidate()
+        activityTimer = nil
+        loadingTimer?.invalidate()
+        loadingTimer = nil
+        terminalView?.send([0x04])
         terminalView = nil
         delegateHandler = nil
     }
 
     deinit {
+        activityTimer?.invalidate()
+        loadingTimer?.invalidate()
         if isRunning {
             terminalView = nil
             delegateHandler = nil
@@ -87,16 +140,24 @@ private class TerminalDelegateHandler: NSObject, LocalProcessTerminalViewDelegat
 
     nonisolated func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
         MainActor.assumeIsolated {
-            session?.title = title.isEmpty ? session?.title ?? "Terminal" : title
+            guard let session else { return }
+            if !title.isEmpty {
+                session.title = title
+            }
+            session.markTitleChanged()
         }
     }
 
     nonisolated func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {
+        MainActor.assumeIsolated {
+            session?.markActivity()
+        }
     }
 
     nonisolated func processTerminated(source: TerminalView, exitCode: Int32?) {
         MainActor.assumeIsolated {
             session?.isRunning = false
+            session?.activityState = .idle
         }
     }
 }

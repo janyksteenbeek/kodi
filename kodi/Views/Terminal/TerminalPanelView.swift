@@ -24,6 +24,10 @@ struct TerminalPanelView: View {
 
     private var panelHeader: some View {
         HStack(spacing: 6) {
+            if let session = viewModel.panelTerminal {
+                PanelTerminalLabel(session: session)
+            }
+
             if viewModel.terminalSessions.count > 1 {
                 Picker(selection: panelTerminalBinding, content: {
                     ForEach(viewModel.terminalSessions) { session in
@@ -34,11 +38,7 @@ struct TerminalPanelView: View {
                 })
                 .labelsHidden()
                 .pickerStyle(.menu)
-                .frame(maxWidth: 150)
-            } else if let session = viewModel.panelTerminal {
-                Label(session.title, systemImage: "terminal")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                .frame(maxWidth: 120)
             }
 
             Spacer()
@@ -78,5 +78,41 @@ struct TerminalPanelView: View {
             get: { viewModel.panelTerminalID ?? viewModel.terminalSessions.first?.id ?? UUID() },
             set: { viewModel.panelTerminalID = $0 }
         )
+    }
+}
+
+private struct PanelTerminalLabel: View {
+    let session: TerminalSession
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if session.program.isCustomImage {
+                Image(session.program.icon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 12, height: 12)
+                    .foregroundStyle(session.program.color)
+            } else {
+                Image(systemName: session.program.icon)
+                    .font(.caption)
+                    .foregroundStyle(session.program.color)
+            }
+
+            switch session.activityState {
+            case .loading:
+                ProgressView()
+                    .controlSize(.mini)
+                Text("Loading…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            case .busy:
+                Circle()
+                    .fill(session.program.color)
+                    .frame(width: 5, height: 5)
+                    .opacity(0.8)
+            case .idle:
+                EmptyView()
+            }
+        }
     }
 }

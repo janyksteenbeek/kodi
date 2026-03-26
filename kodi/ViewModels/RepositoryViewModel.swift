@@ -187,10 +187,12 @@ final class RepositoryViewModel: Identifiable {
             workingDirectory: repository.path
         )
         let fullCommand = item.arguments.isEmpty ? item.command : "\(item.command) \(item.arguments)"
+        let program = TerminalProgram.detect(from: item.command)
         if item.isPlainTerminal {
+            session.program = .shell
             session.startProcess()
         } else {
-            session.startProcess(initialCommand: fullCommand)
+            session.startProcess(initialCommand: fullCommand, program: program)
         }
         terminalSessions.append(session)
         panelTerminalID = session.id
