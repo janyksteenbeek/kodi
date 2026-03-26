@@ -3,6 +3,7 @@ import SwiftUI
 struct SidebarView: View {
     @Bindable var viewModel: RepositoryViewModel
     @Environment(AppState.self) private var appState
+    @AppStorage("groupByFolder") private var groupByFolder = true
 
     var body: some View {
         List(selection: Binding(
@@ -65,12 +66,12 @@ struct SidebarView: View {
                     }
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            appState.groupByFolder.toggle()
+                            groupByFolder.toggle()
                         }
                     } label: {
                         Label(
-                            appState.groupByFolder ? "Flat List" : "Group by Folder",
-                            systemImage: appState.groupByFolder ? "list.bullet" : "folder"
+                            groupByFolder ? "Flat List" : "Group by Folder",
+                            systemImage: groupByFolder ? "list.bullet" : "folder"
                         )
                     }
                 } label: {

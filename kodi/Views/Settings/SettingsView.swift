@@ -5,6 +5,8 @@ struct SettingsView: View {
         TabView {
             GeneralSettingsTab()
                 .tabItem { Label("General", systemImage: "gear") }
+            CodeReviewSettingsTab()
+                .tabItem { Label("Code Review", systemImage: "doc.text.magnifyingglass") }
             TerminalSettingsTab()
                 .tabItem { Label("Terminal", systemImage: "terminal") }
             QuickLaunchSettingsTab()
@@ -187,19 +189,16 @@ private struct GitSettingsTab: View {
     }
 }
 
-// MARK: - View
+// MARK: - Code Review
 
-private struct ViewSettingsTab: View {
+private struct CodeReviewSettingsTab: View {
     @AppStorage("defaultDiffMode") private var defaultDiffMode = "unified"
+    @AppStorage("diffFontSize") private var diffFontSize = 12.0
     @AppStorage("diffContextLines") private var diffContextLines = 3
     @AppStorage("showLineNumbers") private var showLineNumbers = true
     @AppStorage("diffWordWrap") private var diffWordWrap = false
-    @AppStorage("defaultTerminalPanelMode") private var defaultTerminalPanelMode = "right"
-    @AppStorage("primaryPanel") private var primaryPanel = "terminal"
-    @AppStorage("terminalClickAction") private var terminalClickAction = "panel"
-    @AppStorage("terminalOpenOnLaunch") private var terminalOpenOnLaunch = false
-    @AppStorage("groupByFolder") private var groupByFolder = true
-    @AppStorage("showUntrackedFiles") private var showUntrackedFiles = true
+    @AppStorage("diffShowWhitespace") private var showWhitespace = false
+    @AppStorage("diffTabWidth") private var tabWidth = 4
 
     var body: some View {
         Form {
@@ -207,6 +206,37 @@ private struct ViewSettingsTab: View {
                 Picker("Default Mode", selection: $defaultDiffMode) {
                     Label("Unified", systemImage: "text.alignleft").tag("unified")
                     Label("Side by Side", systemImage: "rectangle.split.2x1").tag("sideBySide")
+                }
+            } header: {
+                Text("Layout")
+            } footer: {
+                Text("How diffs are displayed when opening a file. You can always switch per file using the toolbar.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+
+            Section {
+                HStack {
+                    Text("Font Size")
+                    Spacer()
+                    TextField("", value: $diffFontSize, format: .number)
+                        .frame(width: 45)
+                        .multilineTextAlignment(.trailing)
+                    Stepper("", value: $diffFontSize, in: 9...24, step: 1)
+                        .labelsHidden()
+                    Text("pt")
+                        .foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("Tab Width")
+                    Spacer()
+                    TextField("", value: $tabWidth, format: .number)
+                        .frame(width: 40)
+                        .multilineTextAlignment(.trailing)
+                    Stepper("", value: $tabWidth, in: 1...8, step: 1)
+                        .labelsHidden()
+                    Text("spaces")
+                        .foregroundStyle(.secondary)
                 }
                 HStack {
                     Text("Context Lines")
@@ -217,6 +247,15 @@ private struct ViewSettingsTab: View {
                     Stepper("", value: $diffContextLines, in: 0...20, step: 1)
                         .labelsHidden()
                 }
+            } header: {
+                Text("Text")
+            } footer: {
+                Text("Font size applies to diff content. Context lines control how many unchanged lines surround each change.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+
+            Section {
                 Toggle(isOn: $showLineNumbers) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Show line numbers")
@@ -233,14 +272,34 @@ private struct ViewSettingsTab: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                Toggle(isOn: $showWhitespace) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show whitespace changes")
+                        Text("Highlight spaces, tabs and trailing whitespace in diffs.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             } header: {
-                Text("Code Review")
-            } footer: {
-                Text("Context lines control how many unchanged lines are shown around each change.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                Text("Display")
             }
+        }
+        .formStyle(.grouped)
+    }
+}
 
+// MARK: - View
+
+private struct ViewSettingsTab: View {
+    @AppStorage("defaultTerminalPanelMode") private var defaultTerminalPanelMode = "right"
+    @AppStorage("primaryPanel") private var primaryPanel = "terminal"
+    @AppStorage("terminalClickAction") private var terminalClickAction = "panel"
+    @AppStorage("terminalOpenOnLaunch") private var terminalOpenOnLaunch = false
+    @AppStorage("groupByFolder") private var groupByFolder = true
+    @AppStorage("showUntrackedFiles") private var showUntrackedFiles = true
+
+    var body: some View {
+        Form {
             Section {
                 Picker("Split Position", selection: $defaultTerminalPanelMode) {
                     Label("Bottom", systemImage: "rectangle.split.1x2").tag("bottom")

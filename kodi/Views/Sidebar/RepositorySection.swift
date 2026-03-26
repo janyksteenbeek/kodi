@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RepositorySection: View {
     @Bindable var viewModel: RepositoryViewModel
+    @AppStorage("groupByFolder") private var groupByFolder = true
 
     var body: some View {
         if viewModel.changedFiles.isEmpty {
@@ -24,7 +25,7 @@ struct RepositorySection: View {
                 }
                 .padding(.vertical, 4)
             }
-        } else if appState.groupByFolder {
+        } else if groupByFolder {
             let tree = FileTreeNode.buildTree(from: viewModel.changedFiles)
             ForEach(tree) { node in
                 FileTreeNodeView(node: node, viewModel: viewModel)
@@ -36,6 +37,4 @@ struct RepositorySection: View {
             }
         }
     }
-
-    @Environment(AppState.self) private var appState
 }
