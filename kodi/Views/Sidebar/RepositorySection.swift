@@ -11,7 +11,18 @@ struct RepositorySection: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 8)
             } else {
-                ContentUnavailableView("No changes", systemImage: "checkmark.circle")
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("No changes")
+                            .font(.callout.weight(.medium))
+                        Text("Working tree is clean")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(.vertical, 4)
             }
         } else if appState.groupByFolder {
             let tree = FileTreeNode.buildTree(from: viewModel.changedFiles)

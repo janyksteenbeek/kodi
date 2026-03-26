@@ -144,16 +144,37 @@ private struct WelcomeView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        ContentUnavailableView {
-            Label("Welcome to Kodi", systemImage: "arrow.triangle.branch")
-        } description: {
-            Text("The Agentic IDE")
-        } actions: {
-            Button("Open Repository…") {
+        VStack(spacing: 16) {
+            Spacer()
+
+            Image(systemName: "arrow.triangle.branch")
+                .font(.system(size: 48, weight: .thin))
+                .foregroundStyle(.tint)
+
+            VStack(spacing: 4) {
+                Text("Kodi")
+                    .font(.largeTitle.weight(.bold))
+                Text("The Agentic IDE")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
                 appState.addRepository()
+            } label: {
+                Label("Open Repository…", systemImage: "folder.badge.plus")
             }
             .buttonStyle(.borderedProminent)
-            .keyboardShortcut("o", modifiers: .command)
+            .controlSize(.large)
+            .padding(.top, 8)
+
+            Text("⌘O")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+
+            Spacer()
+            Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
