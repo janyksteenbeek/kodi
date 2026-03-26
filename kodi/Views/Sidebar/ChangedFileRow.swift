@@ -3,6 +3,7 @@ import SwiftUI
 struct ChangedFileRow: View {
     let file: ChangedFile
     @Bindable var viewModel: RepositoryViewModel
+    var showDirectory: Bool = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -19,11 +20,14 @@ struct ChangedFileRow: View {
                 Text(file.fileName)
                     .font(.body)
                     .lineLimit(1)
-                if !file.directory.isEmpty {
+
+                if showDirectory, !file.directory.isEmpty {
                     Text(file.directory)
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(file.directory)
                 }
             }
 

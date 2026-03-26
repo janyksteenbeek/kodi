@@ -3,6 +3,10 @@ import SwiftUI
 struct UnifiedDiffView: View {
     let diff: DiffResult
 
+    private var fileExtension: String {
+        URL(fileURLWithPath: diff.filePath).pathExtension
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(diff.hunks) { hunk in
@@ -17,7 +21,7 @@ struct UnifiedDiffView: View {
 
                 // Lines
                 ForEach(hunk.lines) { line in
-                    DiffLineView(line: line)
+                    DiffLineView(line: line, fileExtension: fileExtension)
                 }
             }
         }

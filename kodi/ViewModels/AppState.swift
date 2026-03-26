@@ -5,6 +5,7 @@ final class AppState {
     var repositories: [GitRepository] = []
     var selectedRepositoryID: UUID?
     var repositoryViewModels: [UUID: RepositoryViewModel] = [:]
+    var groupByFolder: Bool = true
 
     private let fileWatcher = FileWatcherService()
     private let gitService = GitService()

@@ -3,6 +3,7 @@ import SwiftUI
 struct DiffLineView: View {
     let line: DiffLine
     var compact: Bool = false
+    var fileExtension: String = ""
 
     var body: some View {
         HStack(spacing: 0) {
@@ -33,9 +34,8 @@ struct DiffLineView: View {
                 .foregroundStyle(prefixColor)
                 .frame(width: 20, alignment: .center)
 
-            // Content
-            Text(line.content)
-                .font(.body.monospaced())
+            // Content with syntax highlighting
+            Text(SyntaxHighlighter.highlight(line.content, fileExtension: fileExtension))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.trailing, 8)
         }

@@ -19,9 +19,14 @@ struct RepositorySection: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 8)
                 }
+            } else if appState.groupByFolder {
+                let tree = FileTreeNode.buildTree(from: viewModel.changedFiles)
+                ForEach(tree) { node in
+                    FileTreeNodeView(node: node, viewModel: viewModel)
+                }
             } else {
                 ForEach(viewModel.changedFiles) { file in
-                    ChangedFileRow(file: file, viewModel: viewModel)
+                    ChangedFileRow(file: file, viewModel: viewModel, showDirectory: true)
                         .tag(file.path)
                 }
             }

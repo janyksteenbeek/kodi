@@ -82,6 +82,14 @@ final class RepositoryViewModel: Identifiable {
         }
     }
 
+    func setStaging(_ staged: Bool, for files: [ChangedFile]) {
+        for file in files {
+            if let index = changedFiles.firstIndex(where: { $0.id == file.id }) {
+                changedFiles[index].isStaged = staged
+            }
+        }
+    }
+
     func commit() async {
         guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               stagedCount > 0 else { return }

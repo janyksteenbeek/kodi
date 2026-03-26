@@ -3,6 +3,10 @@ import SwiftUI
 struct SideBySideDiffView: View {
     let diff: DiffResult
 
+    private var fileExtension: String {
+        URL(fileURLWithPath: diff.filePath).pathExtension
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(diff.hunks) { hunk in
@@ -20,7 +24,7 @@ struct SideBySideDiffView: View {
                     HStack(spacing: 0) {
                         // Left side (old)
                         if let left = pairs[index].left {
-                            DiffLineView(line: left, compact: true)
+                            DiffLineView(line: left, compact: true, fileExtension: fileExtension)
                                 .frame(maxWidth: .infinity)
                         } else {
                             Color.clear
@@ -34,7 +38,7 @@ struct SideBySideDiffView: View {
 
                         // Right side (new)
                         if let right = pairs[index].right {
-                            DiffLineView(line: right, compact: true)
+                            DiffLineView(line: right, compact: true, fileExtension: fileExtension)
                                 .frame(maxWidth: .infinity)
                         } else {
                             Color.clear
