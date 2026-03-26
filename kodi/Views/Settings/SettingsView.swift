@@ -14,7 +14,7 @@ struct SettingsView: View {
             ViewSettingsTab()
                 .tabItem { Label("View", systemImage: "eye") }
         }
-        .frame(width: 500, height: 380)
+        .frame(width: 520, height: 420)
     }
 }
 
@@ -25,20 +25,34 @@ private struct GeneralSettingsTab: View {
 
     var body: some View {
         Form {
-            Toggle("Auto-refresh on file changes", isOn: $autoRefresh)
+            Section {
+                Toggle(isOn: $autoRefresh) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Auto-refresh")
+                        Text("Automatically refresh the file list when changes are detected on disk.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("File Watching")
+            }
 
             Section {
-                Button("Reset All Settings", role: .destructive) {
-                    resetAllSettings()
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("This will remove all saved preferences and restore the app to its default state. Repositories will not be removed.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Reset All Settings…", role: .destructive) {
+                        let domain = Bundle.main.bundleIdentifier!
+                        UserDefaults.standard.removePersistentDomain(forName: domain)
+                    }
                 }
+            } header: {
+                Text("Reset")
             }
         }
         .formStyle(.grouped)
-    }
-
-    private func resetAllSettings() {
-        let domain = Bundle.main.bundleIdentifier!
-        UserDefaults.standard.removePersistentDomain(forName: domain)
     }
 }
 
@@ -59,41 +73,62 @@ private struct TerminalSettingsTab: View {
 
     var body: some View {
         Form {
-            Section("Font") {
+            Section {
                 HStack {
-                    TextField("Size", value: $terminalFontSize, format: .number)
-                        .frame(width: 50)
-                    Stepper("Font Size", value: $terminalFontSize, in: 9...24, step: 1)
+                    Text("Font Size")
+                    Spacer()
+                    TextField("", value: $terminalFontSize, format: .number)
+                        .frame(width: 45)
+                        .multilineTextAlignment(.trailing)
+                    Stepper("", value: $terminalFontSize, in: 9...24, step: 1)
                         .labelsHidden()
                     Text("pt")
                         .foregroundStyle(.secondary)
                 }
+                Text("Applies to new terminal sessions. Existing terminals keep their current size.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Appearance")
             }
 
-            Section("Shell") {
-                Picker("Shell", selection: $terminalShell) {
+            Section {
+                Picker("Default Shell", selection: $terminalShell) {
                     ForEach(availableShells, id: \.0) { shell in
                         Text(shell.1).tag(shell.0)
                     }
                 }
-
                 if terminalShell.isEmpty {
                     let systemShell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
-                    Text("Using system shell: \(systemShell)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle")
+                            .font(.caption)
+                        Text("Using system shell: **\(systemShell)**")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
                 }
+            } header: {
+                Text("Shell")
+            } footer: {
+                Text("The shell used when opening new terminal sessions and running quick launch commands.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
 
-            Section("Activity Detection") {
-                Toggle("Track program activity", isOn: $activityTracking)
-                Text("Shows loading, busy and idle indicators for Claude, Codex and other tools.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            Section {
+                Toggle(isOn: $activityTracking) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Activity Detection")
+                        Text("Show real-time loading, busy and idle indicators for Claude, Codex and other recognized tools in the sidebar.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
 
                 if activityTracking {
                     HStack {
-                        Text("Idle timeout")
+                        Text("Idle Timeout")
                         Spacer()
                         TextField("", value: $idleTimeout, format: .number)
                             .frame(width: 40)
@@ -103,7 +138,12 @@ private struct TerminalSettingsTab: View {
                         Text("sec")
                             .foregroundStyle(.secondary)
                     }
+                    Text("How long to wait after the last activity before marking a tool as idle. Increase if the indicator flickers.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+            } header: {
+                Text("Smart Terminals")
             }
         }
         .formStyle(.grouped)
@@ -119,13 +159,28 @@ private struct GitSettingsTab: View {
 
     var body: some View {
         Form {
-            Section("Author") {
-                TextField("Name", text: $gitAuthorName, prompt: Text("From git config"))
-                TextField("Email", text: $gitAuthorEmail, prompt: Text("From git config"))
+            Section {
+                TextField("Name", text: $gitAuthorName, prompt: Text("Uses git config value"))
+                TextField("Email", text: $gitAuthorEmail, prompt: Text("Uses git config value"))
+            } header: {
+                Text("Commit Author")
+            } footer: {
+                Text("Override the author name and email for commits. Leave empty to use values from your git configuration.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
 
-            Section("Behavior") {
-                Toggle("Auto-stage tracked files on commit", isOn: $autoStageOnCommit)
+            Section {
+                Toggle(isOn: $autoStageOnCommit) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Auto-stage on commit")
+                        Text("Automatically stage all tracked modified files when committing.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Behavior")
             }
         }
         .formStyle(.grouped)
@@ -136,23 +191,58 @@ private struct GitSettingsTab: View {
 
 private struct ViewSettingsTab: View {
     @AppStorage("defaultDiffMode") private var defaultDiffMode = "unified"
+    @AppStorage("diffContextLines") private var diffContextLines = 3
+    @AppStorage("showLineNumbers") private var showLineNumbers = true
+    @AppStorage("diffWordWrap") private var diffWordWrap = false
     @AppStorage("defaultTerminalPanelMode") private var defaultTerminalPanelMode = "right"
     @AppStorage("primaryPanel") private var primaryPanel = "terminal"
     @AppStorage("terminalClickAction") private var terminalClickAction = "panel"
+    @AppStorage("terminalOpenOnLaunch") private var terminalOpenOnLaunch = false
     @AppStorage("groupByFolder") private var groupByFolder = true
-    @AppStorage("terminalSplitRatio") private var terminalSplitRatio = 0.5
+    @AppStorage("showUntrackedFiles") private var showUntrackedFiles = true
 
     var body: some View {
         Form {
-            Section("Diff") {
-                Picker("Default Diff Mode", selection: $defaultDiffMode) {
+            Section {
+                Picker("Default Mode", selection: $defaultDiffMode) {
                     Label("Unified", systemImage: "text.alignleft").tag("unified")
                     Label("Side by Side", systemImage: "rectangle.split.2x1").tag("sideBySide")
                 }
+                HStack {
+                    Text("Context Lines")
+                    Spacer()
+                    TextField("", value: $diffContextLines, format: .number)
+                        .frame(width: 40)
+                        .multilineTextAlignment(.trailing)
+                    Stepper("", value: $diffContextLines, in: 0...20, step: 1)
+                        .labelsHidden()
+                }
+                Toggle(isOn: $showLineNumbers) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show line numbers")
+                        Text("Display line numbers in the gutter of diff views.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Toggle(isOn: $diffWordWrap) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Word wrap")
+                        Text("Wrap long lines instead of horizontal scrolling.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Code Review")
+            } footer: {
+                Text("Context lines control how many unchanged lines are shown around each change.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
 
-            Section("Terminal Panel") {
-                Picker("Default Position", selection: $defaultTerminalPanelMode) {
+            Section {
+                Picker("Split Position", selection: $defaultTerminalPanelMode) {
                     Label("Bottom", systemImage: "rectangle.split.1x2").tag("bottom")
                     Label("Right", systemImage: "rectangle.split.2x1").tag("right")
                 }
@@ -160,14 +250,45 @@ private struct ViewSettingsTab: View {
                     Label("Diff", systemImage: "doc.text").tag("diff")
                     Label("Terminal", systemImage: "terminal").tag("terminal")
                 }
-                Picker("Terminal Click Action", selection: $terminalClickAction) {
+                Picker("Click Action", selection: $terminalClickAction) {
                     Text("Open in Panel").tag("panel")
                     Text("Open Full Screen").tag("fullscreen")
                 }
+                Toggle(isOn: $terminalOpenOnLaunch) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Open terminal on launch")
+                        Text("Automatically open a terminal panel when opening a repository.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Terminal Panel")
+            } footer: {
+                Text("Primary panel determines which content gets the larger area in split view. Click action controls what happens when you select a terminal in the sidebar.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
 
-            Section("Sidebar") {
-                Toggle("Group files by folder", isOn: $groupByFolder)
+            Section {
+                Toggle(isOn: $groupByFolder) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Group files by folder")
+                        Text("Show changed files in a folder tree instead of a flat list.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Toggle(isOn: $showUntrackedFiles) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show untracked files")
+                        Text("Include new files that haven't been added to git yet.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Sidebar")
             }
         }
         .formStyle(.grouped)
@@ -197,9 +318,17 @@ private struct QuickLaunchSettingsTab: View {
             Section {
                 ForEach($items) { $item in
                     HStack(spacing: 10) {
-                        Image(systemName: item.icon)
-                            .foregroundStyle(item.displayColor)
-                            .frame(width: 20)
+                        if item.isCustomImage {
+                            Image(item.icon)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 18, height: 18)
+                                .foregroundStyle(item.displayColor)
+                        } else {
+                            Image(systemName: item.icon)
+                                .foregroundStyle(item.displayColor)
+                                .frame(width: 18)
+                        }
 
                         VStack(alignment: .leading, spacing: 1) {
                             Text(item.name)
@@ -209,7 +338,7 @@ private struct QuickLaunchSettingsTab: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             } else {
-                                Text("Plain shell")
+                                Text("Plain shell session")
                                     .font(.caption)
                                     .foregroundStyle(.tertiary)
                             }
@@ -237,29 +366,39 @@ private struct QuickLaunchSettingsTab: View {
             } header: {
                 Text("Launch Items")
             } footer: {
-                Button {
-                    let newItem = QuickLaunchItem(
-                        name: "New Item",
-                        command: "",
-                        arguments: "",
-                        icon: "terminal",
-                        color: "gray"
-                    )
-                    items.append(newItem)
-                    editingItem = newItem
-                    save()
-                } label: {
-                    Label("Add Item", systemImage: "plus")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("These appear in the sidebar and on the main screen for quick access. Claude and Codex are automatically detected for activity tracking.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+
+                    Button {
+                        let newItem = QuickLaunchItem(
+                            name: "New Item",
+                            command: "",
+                            arguments: "",
+                            icon: "terminal",
+                            color: "gray"
+                        )
+                        items.append(newItem)
+                        editingItem = newItem
+                        save()
+                    } label: {
+                        Label("Add Item", systemImage: "plus")
+                    }
+                    .buttonStyle(.borderless)
                 }
-                .buttonStyle(.borderless)
-                .padding(.top, 4)
             }
 
-            Section("Reset") {
+            Section {
                 Button("Restore Defaults") {
                     items = QuickLaunchItem.defaultItems
                     save()
                 }
+                Text("Reset quick launch items to Terminal, Claude and Codex.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Reset")
             }
         }
         .formStyle(.grouped)
@@ -292,19 +431,29 @@ private struct QuickLaunchEditSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             Form {
-                TextField("Name", text: $item.name)
-                TextField("Command", text: $item.command, prompt: Text("e.g. claude, codex"))
-                TextField("Arguments", text: $item.arguments, prompt: Text("Optional flags"))
-
-                Picker("Icon", selection: $item.icon) {
-                    ForEach(availableIcons, id: \.self) { icon in
-                        Label(icon, systemImage: icon).tag(icon)
-                    }
+                Section {
+                    TextField("Name", text: $item.name)
+                    TextField("Command", text: $item.command, prompt: Text("e.g. claude, codex"))
+                    TextField("Arguments", text: $item.arguments, prompt: Text("Optional flags"))
+                } header: {
+                    Text("Command")
+                } footer: {
+                    Text("Leave command empty for a plain shell session.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
 
-                Picker("Color", selection: $item.color) {
-                    ForEach(availableColors, id: \.0) { color in
-                        Text(color.1).tag(color.0)
+                Section("Appearance") {
+                    Picker("Icon", selection: $item.icon) {
+                        ForEach(availableIcons, id: \.self) { icon in
+                            Label(icon, systemImage: icon).tag(icon)
+                        }
+                    }
+
+                    Picker("Color", selection: $item.color) {
+                        ForEach(availableColors, id: \.0) { color in
+                            Text(color.1).tag(color.0)
+                        }
                     }
                 }
             }
@@ -319,9 +468,10 @@ private struct QuickLaunchEditSheet: View {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
             }
             .padding()
         }
-        .frame(width: 350, height: 320)
+        .frame(width: 380, height: 340)
     }
 }
