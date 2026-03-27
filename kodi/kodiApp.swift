@@ -5,6 +5,10 @@ struct kodiApp: App {
     @State private var appState = AppState()
     @FocusedValue(\.repositoryViewModel) private var focusedVM
 
+    init() {
+        QuickLaunchItem.runInitialDetectionIfNeeded()
+    }
+
     var body: some Scene {
         WindowGroup(for: UUID.self) { $repoID in
             RepoWindowContent(repoID: $repoID, appState: appState)

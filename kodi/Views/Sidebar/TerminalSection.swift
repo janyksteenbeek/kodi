@@ -25,7 +25,7 @@ struct TerminalSection: View {
 
 struct QuickLaunchBar: View {
     @Bindable var viewModel: RepositoryViewModel
-    private let items = QuickLaunchItem.loadItems()
+    @State private var items = QuickLaunchItem.loadItems()
 
     var body: some View {
         HStack(spacing: 4) {
@@ -49,5 +49,8 @@ struct QuickLaunchBar: View {
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 4)
+        .onReceive(NotificationCenter.default.publisher(for: .quickLaunchItemsDidChange)) { _ in
+            items = QuickLaunchItem.loadItems()
+        }
     }
 }

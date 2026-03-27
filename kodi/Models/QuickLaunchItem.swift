@@ -1,5 +1,9 @@
 import SwiftUI
 
+extension Notification.Name {
+    static let quickLaunchItemsDidChange = Notification.Name("quickLaunchItemsDidChange")
+}
+
 struct QuickLaunchItem: Identifiable, Codable, Equatable {
     var id: UUID = UUID()
     var name: String
@@ -70,12 +74,25 @@ struct QuickLaunchItem: Identifiable, Codable, Equatable {
     static func loadItems() -> [QuickLaunchItem] {
         guard let data = UserDefaults.standard.data(forKey: "quickLaunchItems"),
               let items = try? JSONDecoder().decode([QuickLaunchItem].self, from: data) else {
-            // First launch: auto-detect installed tools
-            let detected = detectInstalledItems()
-            saveItems(detected)
-            return detected
+            // First launch: return Terminal only, async detection will populate the rest
+            let fallback = [QuickLaunchItem(name: "Terminal", command: "", arguments: "", icon: "terminal", color: "gray")]
+            return fallback
         }
         return items
+    }
+
+    /// Run detection asynchronously and update stored items if this is first launch or a reset
+    static func runInitialDetectionIfNeeded() {
+        // If items already exist in UserDefaults, skip
+        if UserDefaults.standard.data(forKey: "quickLaunchItems") != nil { return }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let detected = detectInstalledItems()
+            DispatchQueue.main.async {
+                saveItems(detected)
+                NotificationCenter.default.post(name: .quickLaunchItemsDidChange, object: nil)
+            }
+        }
     }
 
     static func saveItems(_ items: [QuickLaunchItem]) {

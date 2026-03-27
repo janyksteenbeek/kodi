@@ -19,7 +19,7 @@ struct QuickLaunchIcon: View {
 
 struct QuickLaunchGrid: View {
     let onLaunch: (QuickLaunchItem) -> Void
-    private let items = QuickLaunchItem.loadItems()
+    @State private var items = QuickLaunchItem.loadItems()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -34,6 +34,9 @@ struct QuickLaunchGrid: View {
                     }
                 }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .quickLaunchItemsDidChange)) { _ in
+            items = QuickLaunchItem.loadItems()
         }
     }
 }

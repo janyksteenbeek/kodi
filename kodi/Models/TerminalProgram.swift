@@ -57,22 +57,32 @@ enum TerminalProgram: String, Codable {
         return .shell
     }
 
+    /// Common directories where CLI tools are installed (not in sandboxed app PATH)
+    private static var searchPaths: [String] {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return [
+            "\(home)/.local/bin",
+            "\(home)/.opencode/bin",
+            "\(home)/.bun/bin",
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+        ]
+    }
+
     /// Check if the CLI tool is available on this system
     static func isInstalled(_ program: TerminalProgram) -> Bool {
         guard program != .shell else { return true }
         let cmd = program.command
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["which", cmd]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            return false
+        let fm = FileManager.default
+        // Check common install locations directly (sandboxed apps have limited PATH)
+        for dir in searchPaths {
+            let fullPath = "\(dir)/\(cmd)"
+            if fm.isExecutableFile(atPath: fullPath) {
+                return true
+            }
         }
+        return false
     }
 
     /// All known AI agent programs

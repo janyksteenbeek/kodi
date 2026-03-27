@@ -262,6 +262,17 @@ private struct AISettingsTab: View {
 
     private func detectTools() {
         installedTools = TerminalProgram.aiPrograms.filter { TerminalProgram.isInstalled($0) }
+
+        // Also update quick launch items with newly detected tools
+        var currentItems = QuickLaunchItem.loadItems()
+        for program in installedTools {
+            let item = QuickLaunchItem.item(for: program)
+            if !currentItems.contains(where: { $0.command == item.command }) {
+                currentItems.append(item)
+            }
+        }
+        QuickLaunchItem.saveItems(currentItems)
+        NotificationCenter.default.post(name: .quickLaunchItemsDidChange, object: nil)
     }
 }
 
@@ -694,6 +705,7 @@ private struct QuickLaunchSettingsTab: View {
 
     private func save() {
         QuickLaunchItem.saveItems(items)
+        NotificationCenter.default.post(name: .quickLaunchItemsDidChange, object: nil)
     }
 }
 
