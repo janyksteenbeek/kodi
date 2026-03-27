@@ -6,7 +6,6 @@ struct ChangedFileRow: View {
     var showDirectory: Bool = false
 
     @AppStorage("showFileIcons") private var showFileIcons = true
-    @AppStorage("compactMode") private var compactMode = false
 
     var body: some View {
         HStack(spacing: 6) {
@@ -33,7 +32,7 @@ struct ChangedFileRow: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(file.status.color)
         }
-        .padding(.vertical, compactMode ? 0 : 1)
+        .padding(.vertical, 3)
         .tag(file.path)
     }
 }

@@ -95,8 +95,7 @@ private struct GeneralSettingsTab: View {
 private struct AppearanceSettingsTab: View {
     @AppStorage("appColorScheme") private var appColorScheme = "system"
     @AppStorage("sidebarWidth") private var sidebarWidth = 260.0
-    @AppStorage("compactMode") private var compactMode = false
-    @AppStorage("showFileIcons") private var showFileIcons = true
+@AppStorage("showFileIcons") private var showFileIcons = true
 
     var body: some View {
         Form {
@@ -115,15 +114,7 @@ private struct AppearanceSettingsTab: View {
             }
 
             Section {
-                Toggle(isOn: $compactMode) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Compact mode")
-                        Text("Reduce spacing and padding throughout the interface for more content density.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Toggle(isOn: $showFileIcons) {
+Toggle(isOn: $showFileIcons) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Show file type icons")
                         Text("Display colored icons based on file extension in the sidebar.")
@@ -508,6 +499,7 @@ private struct CodeReviewSettingsTab: View {
 
 private struct ViewSettingsTab: View {
     @AppStorage("defaultTerminalPanelMode") private var defaultTerminalPanelMode = "right"
+    @AppStorage("defaultTerminalPaneLayout") private var defaultTerminalPaneLayout = "Side by Side"
     @AppStorage("primaryPanel") private var primaryPanel = "terminal"
     @AppStorage("terminalClickAction") private var terminalClickAction = "panel"
     @AppStorage("terminalOpenOnLaunch") private var terminalOpenOnLaunch = false
@@ -521,14 +513,23 @@ private struct ViewSettingsTab: View {
                     Label("Bottom", systemImage: "rectangle.split.1x2").tag("bottom")
                     Label("Right", systemImage: "rectangle.split.2x1").tag("right")
                 }
+                .pickerStyle(.segmented)
+                Picker("Pane Layout", selection: $defaultTerminalPaneLayout) {
+                    Label("Side by Side", systemImage: "rectangle.split.3x1").tag("Side by Side")
+                    Label("Stacked", systemImage: "rectangle.split.1x2").tag("Stacked")
+                    Label("Grid", systemImage: "square.grid.2x2").tag("Grid")
+                }
+                .pickerStyle(.segmented)
                 Picker("Primary Panel", selection: $primaryPanel) {
                     Label("Diff", systemImage: "doc.text").tag("diff")
                     Label("Terminal", systemImage: "terminal").tag("terminal")
                 }
+                .pickerStyle(.segmented)
                 Picker("Click Action", selection: $terminalClickAction) {
                     Text("Open in Panel").tag("panel")
                     Text("Open Full Screen").tag("fullscreen")
                 }
+                .pickerStyle(.segmented)
                 Toggle(isOn: $terminalOpenOnLaunch) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Open terminal on launch")

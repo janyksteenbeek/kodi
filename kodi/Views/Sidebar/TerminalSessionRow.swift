@@ -4,7 +4,6 @@ struct TerminalSessionRow: View {
     let session: TerminalSession
     @Bindable var viewModel: RepositoryViewModel
     @AppStorage("terminalClickAction") private var terminalClickAction = "panel"
-    @AppStorage("compactMode") private var compactMode = false
 
     private var tag: String {
         RepositoryViewModel.terminalTagPrefix + session.id.uuidString
@@ -30,15 +29,15 @@ struct TerminalSessionRow: View {
 
             activityIndicator
         }
-        .padding(.vertical, compactMode ? 0 : 1)
+        .padding(.vertical, 3)
         .background {
             if session.activityState == .busy {
                 ShineEffect(color: session.program.color)
                     .padding(.horizontal, -10)
                     .padding(.vertical, -4)
+                    .clipShape(.rect(cornerRadius: 6))
             }
         }
-        .clipShape(.rect(cornerRadius: 6))
         .tag(tag)
         .contextMenu {
             Button {

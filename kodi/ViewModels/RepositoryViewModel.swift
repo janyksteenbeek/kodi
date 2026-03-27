@@ -22,6 +22,7 @@ final class RepositoryViewModel: Identifiable {
     var isTerminalPanelVisible: Bool = false
     var terminalPanelMode: TerminalPanelMode
     var panelTerminalIDs: [UUID] = []
+    var terminalPaneLayout: TerminalPaneLayout
 
     private let gitService: GitService
 
@@ -49,6 +50,20 @@ final class RepositoryViewModel: Identifiable {
         }
     }
 
+    enum TerminalPaneLayout: String, CaseIterable {
+        case horizontal = "Side by Side"
+        case vertical = "Stacked"
+        case grid = "Grid"
+
+        var icon: String {
+            switch self {
+            case .horizontal: "rectangle.split.3x1"
+            case .vertical: "rectangle.split.1x2"
+            case .grid: "square.grid.2x2"
+            }
+        }
+    }
+
     init(repository: GitRepository, gitService: GitService) {
         self.id = repository.id
         self.repository = repository
@@ -59,6 +74,9 @@ final class RepositoryViewModel: Identifiable {
 
         let savedPanelMode = UserDefaults.standard.string(forKey: "defaultTerminalPanelMode") ?? "right"
         self.terminalPanelMode = TerminalPanelMode(rawValue: savedPanelMode == "right" ? "Right" : "Bottom") ?? .right
+
+        let savedPaneLayout = UserDefaults.standard.string(forKey: "defaultTerminalPaneLayout") ?? "Side by Side"
+        self.terminalPaneLayout = TerminalPaneLayout(rawValue: savedPaneLayout) ?? .horizontal
     }
 
     var stagedFiles: [ChangedFile] {

@@ -45,13 +45,22 @@ final class TerminalSession: Identifiable {
         env["LANG"] = env["LANG"] ?? "en_US.UTF-8"
         let envArray = env.map { "\($0.key)=\($0.value)" }
 
+        // Use a leading dash in execName to start a login shell (reads .zshrc/.zprofile)
+        let shellName = (shell as NSString).lastPathComponent
         tv.startProcess(
             executable: shell,
             args: [],
             environment: envArray,
-            execName: nil,
+            execName: "-\(shellName)",
             currentDirectory: workingDirectory.path
         )
+
+        let menu = NSMenu()
+        menu.addItem(withTitle: "Copy", action: #selector(tv.copy(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Paste", action: #selector(tv.paste(_:)), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Select All", action: #selector(tv.selectAll(_:)), keyEquivalent: "")
+        tv.menu = menu
 
         self.terminalView = tv
     }
