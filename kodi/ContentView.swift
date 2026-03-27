@@ -31,7 +31,7 @@ private struct DetailContentView: View {
     @ViewBuilder
     private var mainContent: some View {
         if let terminal = viewModel.selectedTerminal,
-           !(viewModel.isTerminalPanelVisible && viewModel.panelTerminalID == terminal.id) {
+           !(viewModel.isTerminalPanelVisible && viewModel.panelTerminalIDs.contains(terminal.id)) {
             TerminalTabView(session: terminal, viewModel: viewModel)
         } else {
             DiffContentView(viewModel: viewModel)
@@ -40,14 +40,6 @@ private struct DetailContentView: View {
 
     private var splitLayout: some View {
         let isRight = viewModel.terminalPanelMode == .right
-
-        let primaryView = terminalIsPrimary
-            ? AnyView(TerminalPanelView(viewModel: viewModel))
-            : AnyView(mainContent)
-
-        let secondaryView = terminalIsPrimary
-            ? AnyView(mainContent)
-            : AnyView(TerminalPanelView(viewModel: viewModel))
 
         return GeometryReader { geo in
             let layout = isRight
@@ -58,16 +50,29 @@ private struct DetailContentView: View {
             let secondarySize = total * panelRatio
 
             layout {
-                primaryView
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if terminalIsPrimary {
+                    TerminalPanelView(viewModel: viewModel)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    mainContent
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
 
                 SplitDivider(isHorizontal: isRight, panelRatio: $panelRatio, containerSize: total)
 
-                secondaryView
-                    .frame(
-                        width: isRight ? secondarySize : nil,
-                        height: isRight ? nil : secondarySize
-                    )
+                if terminalIsPrimary {
+                    mainContent
+                        .frame(
+                            width: isRight ? secondarySize : nil,
+                            height: isRight ? nil : secondarySize
+                        )
+                } else {
+                    TerminalPanelView(viewModel: viewModel)
+                        .frame(
+                            width: isRight ? secondarySize : nil,
+                            height: isRight ? nil : secondarySize
+                        )
+                }
             }
         }
     }

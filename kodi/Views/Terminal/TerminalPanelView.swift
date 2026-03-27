@@ -8,9 +8,8 @@ struct TerminalPanelView: View {
             panelHeader
             Divider()
 
-            if let session = viewModel.panelTerminal {
-                TerminalNSViewRepresentable(session: session)
-            } else {
+            let terminals = viewModel.panelTerminals
+            if terminals.isEmpty {
                 ContentUnavailableView {
                     Label("No Terminal", systemImage: "terminal")
                 } actions: {
@@ -18,17 +17,24 @@ struct TerminalPanelView: View {
                         viewModel.createTerminalInPanel()
                     }
                 }
+            } else {
+                TerminalMultiPaneView(sessions: terminals, viewModel: viewModel)
             }
         }
     }
 
     private var panelHeader: some View {
         HStack(spacing: 6) {
-            if let session = viewModel.panelTerminal {
+            let terminals = viewModel.panelTerminals
+            if terminals.count == 1, let session = terminals.first {
                 PanelTerminalLabel(session: session)
+            } else if terminals.count > 1 {
+                ForEach(terminals) { session in
+                    PanelTerminalLabel(session: session)
+                }
             }
 
-            if viewModel.terminalSessions.count > 1 {
+            if viewModel.terminalSessions.count > 1 && viewModel.panelTerminals.count <= 1 {
                 Picker(selection: panelTerminalBinding, content: {
                     ForEach(viewModel.terminalSessions) { session in
                         Text(session.title).tag(session.id)
@@ -78,6 +84,67 @@ struct TerminalPanelView: View {
             get: { viewModel.panelTerminalID ?? viewModel.terminalSessions.first?.id ?? UUID() },
             set: { viewModel.panelTerminalID = $0 }
         )
+    }
+}
+
+// MARK: - Multi-pane terminal view
+
+private struct TerminalMultiPaneView: View {
+    let sessions: [TerminalSession]
+    @Bindable var viewModel: RepositoryViewModel
+
+    private var showPaneHeaders: Bool { sessions.count > 1 }
+
+    var body: some View {
+        GeometryReader { geo in
+            let paneWidth = geo.size.width / CGFloat(sessions.count)
+
+            HStack(spacing: 0) {
+                ForEach(Array(sessions.enumerated()), id: \.element.id) { index, session in
+                    if index > 0 {
+                        Rectangle()
+                            .fill(Color(nsColor: .separatorColor))
+                            .frame(width: 1)
+                    }
+
+                    VStack(spacing: 0) {
+                        if showPaneHeaders {
+                            HStack(spacing: 4) {
+                                PanelTerminalLabel(session: session)
+                                Text(session.title)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                Spacer()
+                                Button {
+                                    viewModel.panelTerminalIDs.removeAll { $0 == session.id }
+                                    if viewModel.panelTerminalIDs.isEmpty {
+                                        if let first = viewModel.terminalSessions.first {
+                                            viewModel.panelTerminalIDs = [first.id]
+                                        } else {
+                                            viewModel.isTerminalPanelVisible = false
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.caption2)
+                                }
+                                .buttonStyle(.borderless)
+                                .foregroundStyle(.secondary)
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color(nsColor: .controlBackgroundColor))
+
+                            Divider()
+                        }
+
+                        TerminalNSViewRepresentable(session: session)
+                    }
+                    .frame(width: paneWidth - (index > 0 ? 0.5 : 0) - (index < sessions.count - 1 ? 0.5 : 0))
+                }
+            }
+        }
     }
 }
 

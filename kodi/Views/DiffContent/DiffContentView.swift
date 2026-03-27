@@ -29,7 +29,7 @@ struct DiffContentView: View {
                     LazyVStack(alignment: .leading, spacing: 20) {
                         ForEach(viewModel.currentDiff) { diffResult in
                             VStack(alignment: .leading, spacing: 0) {
-                                DiffHeaderView(diff: diffResult)
+                                DiffHeaderView(diff: diffResult, viewModel: viewModel)
 
                                 switch viewModel.diffMode {
                                 case .unified:

@@ -2,9 +2,25 @@ import SwiftUI
 
 struct DiffHeaderView: View {
     let diff: DiffResult
+    @Bindable var viewModel: RepositoryViewModel
+
+    private var changedFile: ChangedFile? {
+        viewModel.changedFiles.first { $0.path == diff.filePath }
+    }
 
     var body: some View {
         HStack(spacing: 12) {
+            if let file = changedFile {
+                Toggle(isOn: Binding(
+                    get: { file.isStaged },
+                    set: { _ in viewModel.toggleStaging(for: file) }
+                )) {
+                    EmptyView()
+                }
+                .toggleStyle(.checkbox)
+                .labelsHidden()
+            }
+
             FileIconView(fileName: URL(fileURLWithPath: diff.filePath).lastPathComponent)
 
             VStack(alignment: .leading, spacing: 2) {

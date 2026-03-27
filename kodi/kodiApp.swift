@@ -127,6 +127,7 @@ struct kodiApp: App {
                         vm.closeTerminal(terminal)
                     }
                 }
+                .keyboardShortcut(.delete, modifiers: .command)
                 .disabled(focusedVM?.selectedTerminal == nil)
             }
         }

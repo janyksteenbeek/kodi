@@ -43,6 +43,17 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .onKeyPress(.return) {
+            let terminals = viewModel.selectedTerminals
+            if terminals.count > 1 {
+                viewModel.pinTerminalsToPanel(terminals)
+                // Clear selection so user can navigate away while panes stay
+                viewModel.selectedFilePaths = []
+                viewModel.selectedFilePath = nil
+                return .handled
+            }
+            return .ignored
+        }
         .onKeyPress(.escape) {
             viewModel.selectedFilePaths = []
             viewModel.selectedFilePath = nil
@@ -86,6 +97,17 @@ struct SidebarView: View {
     private func handleSelectionChange(_ selection: Set<String>) {
         if selection.isEmpty {
             Task { await viewModel.selectFiles(viewModel.changedFiles) }
+            return
+        }
+
+        // Multiple terminals selected — show multi-pane preview
+        let terminalTags = selection.filter { $0.hasPrefix(RepositoryViewModel.terminalTagPrefix) }
+        if terminalTags.count > 1 {
+            let sessions = viewModel.selectedTerminals
+            if sessions.count > 1 {
+                viewModel.panelTerminalIDs = sessions.map(\.id)
+                viewModel.isTerminalPanelVisible = true
+            }
             return
         }
 

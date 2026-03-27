@@ -21,7 +21,7 @@ final class RepositoryViewModel: Identifiable {
     private var terminalCounter: Int = 0
     var isTerminalPanelVisible: Bool = false
     var terminalPanelMode: TerminalPanelMode
-    var panelTerminalID: UUID?
+    var panelTerminalIDs: [UUID] = []
 
     private let gitService: GitService
 
@@ -148,11 +148,26 @@ final class RepositoryViewModel: Identifiable {
     static let folderTagPrefix = "__folder__:"
     static let terminalTagPrefix = "__terminal__:"
 
-    var panelTerminal: TerminalSession? {
-        if let id = panelTerminalID {
-            return terminalSessions.first { $0.id == id } ?? terminalSessions.first
+    var panelTerminalID: UUID? {
+        get { panelTerminalIDs.first }
+        set {
+            if let id = newValue {
+                panelTerminalIDs = [id]
+            } else {
+                panelTerminalIDs = []
+            }
         }
-        return terminalSessions.first
+    }
+
+    var panelTerminal: TerminalSession? {
+        panelTerminals.first ?? terminalSessions.first
+    }
+
+    var panelTerminals: [TerminalSession] {
+        let resolved = panelTerminalIDs.compactMap { id in
+            terminalSessions.first { $0.id == id }
+        }
+        return resolved.isEmpty ? [] : resolved
     }
 
     var isTerminalSelected: Bool {
@@ -166,6 +181,22 @@ final class RepositoryViewModel: Identifiable {
         let idStr = String(sel.dropFirst(Self.terminalTagPrefix.count))
         guard let uuid = UUID(uuidString: idStr) else { return nil }
         return terminalSessions.first { $0.id == uuid }
+    }
+
+    var selectedTerminals: [TerminalSession] {
+        let tags = selectedFilePaths.filter { $0.hasPrefix(Self.terminalTagPrefix) }
+        return terminalSessions.filter { session in
+            tags.contains(Self.terminalTagPrefix + session.id.uuidString)
+        }
+    }
+
+    func isTerminalInPanel(_ session: TerminalSession) -> Bool {
+        panelTerminalIDs.contains(session.id)
+    }
+
+    func pinTerminalsToPanel(_ sessions: [TerminalSession]) {
+        panelTerminalIDs = sessions.map(\.id)
+        isTerminalPanelVisible = true
     }
 
     func createTerminal() {
@@ -228,14 +259,17 @@ final class RepositoryViewModel: Identifiable {
 
     func closeTerminal(_ session: TerminalSession) {
         session.terminate()
-        let wasPanel = panelTerminalID == session.id
+        let wasInPanel = panelTerminalIDs.contains(session.id)
         terminalSessions.removeAll { $0.id == session.id }
+        panelTerminalIDs.removeAll { $0 == session.id }
+        selectedFilePaths.remove(Self.terminalTagPrefix + session.id.uuidString)
         if selectedFilePath == Self.terminalTagPrefix + session.id.uuidString {
             selectedFilePath = nil
         }
-        if wasPanel {
-            panelTerminalID = terminalSessions.first?.id
-            if terminalSessions.isEmpty {
+        if wasInPanel && panelTerminalIDs.isEmpty {
+            if let first = terminalSessions.first {
+                panelTerminalIDs = [first.id]
+            } else {
                 isTerminalPanelVisible = false
             }
         }
@@ -254,7 +288,7 @@ final class RepositoryViewModel: Identifiable {
         }
         terminalSessions.removeAll()
         isTerminalPanelVisible = false
-        panelTerminalID = nil
+        panelTerminalIDs = []
     }
 
     func selectFile(_ file: ChangedFile) async {

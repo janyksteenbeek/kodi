@@ -37,5 +37,9 @@ struct TerminalNSViewRepresentable: NSViewRepresentable {
             tv.topAnchor.constraint(equalTo: container.topAnchor),
             tv.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
+
+        // Force layout and redisplay after reparenting to prevent blank terminal
+        tv.needsLayout = true
+        tv.needsDisplay = true
     }
 }

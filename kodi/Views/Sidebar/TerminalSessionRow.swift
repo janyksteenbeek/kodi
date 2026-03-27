@@ -10,20 +10,35 @@ struct TerminalSessionRow: View {
         RepositoryViewModel.terminalTagPrefix + session.id.uuidString
     }
 
+    private var isVisibleInPanel: Bool {
+        viewModel.isTerminalPanelVisible && viewModel.panelTerminalIDs.contains(session.id)
+    }
+
     var body: some View {
         HStack(spacing: 6) {
+            Circle()
+                .fill(isVisibleInPanel ? Color.accentColor.opacity(0.6) : .clear)
+                .frame(width: 5, height: 5)
+
             programIcon
                 .frame(width: 16, height: 16)
 
             Text(session.title)
-                .lineLimit(1)
+                .lineLimit(1...3)
 
             Spacer()
 
             activityIndicator
         }
         .padding(.vertical, compactMode ? 0 : 1)
-        .background { if session.activityState == .busy { ShineEffect(color: session.program.color).padding(.vertical, -8).padding(.horizontal, -12) } }
+        .background {
+            if session.activityState == .busy {
+                ShineEffect(color: session.program.color)
+                    .padding(.horizontal, -10)
+                    .padding(.vertical, -4)
+            }
+        }
+        .clipShape(.rect(cornerRadius: 6))
         .tag(tag)
         .contextMenu {
             Button {
@@ -129,7 +144,7 @@ private struct ShineEffect: View {
                         endPoint: .trailing
                     )
                 )
-                .frame(width: w * 0.7, height: h)
+                .frame(width: w * 0.6, height: h)
                 .offset(x: w * phase)
                 .onAppear {
                     withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: false)) {
@@ -138,6 +153,5 @@ private struct ShineEffect: View {
                 }
         }
         .allowsHitTesting(false)
-        .clipShape(.rect(cornerRadius: 6))
     }
 }
