@@ -57,7 +57,17 @@ struct TerminalPanelView: View {
             .buttonStyle(.borderless)
             .help("New Terminal")
 
-            if viewModel.panelTerminals.count > 1 {
+            if viewModel.panelTerminals.count == 2 {
+                Button {
+                    viewModel.terminalPaneLayout = viewModel.terminalPaneLayout == .horizontal ? .vertical : .horizontal
+                } label: {
+                    Image(systemName: viewModel.terminalPaneLayout == .horizontal
+                        ? RepositoryViewModel.TerminalPaneLayout.vertical.icon
+                        : RepositoryViewModel.TerminalPaneLayout.horizontal.icon)
+                }
+                .buttonStyle(.borderless)
+                .help(viewModel.terminalPaneLayout == .horizontal ? "Stack Vertically" : "Side by Side")
+            } else if viewModel.panelTerminals.count > 2 {
                 Menu {
                     Picker("Layout", selection: $viewModel.terminalPaneLayout) {
                         ForEach(RepositoryViewModel.TerminalPaneLayout.allCases, id: \.self) { layout in
@@ -72,16 +82,6 @@ struct TerminalPanelView: View {
                 .fixedSize()
                 .help("Pane Layout")
             }
-
-            Button {
-                viewModel.terminalPanelMode = viewModel.terminalPanelMode == .bottom ? .right : .bottom
-            } label: {
-                Image(systemName: viewModel.terminalPanelMode == .bottom
-                      ? "rectangle.split.2x1"
-                      : "rectangle.split.1x2")
-            }
-            .buttonStyle(.borderless)
-            .help(viewModel.terminalPanelMode == .bottom ? "Split Right" : "Split Bottom")
 
             Button {
                 viewModel.isTerminalPanelVisible = false

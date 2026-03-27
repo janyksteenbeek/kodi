@@ -62,9 +62,23 @@ struct DiffContentView: View {
                 Button {
                     viewModel.toggleTerminalPanel()
                 } label: {
-                    Label("Terminal", systemImage: "terminal")
+                    Label("Terminal", systemImage: viewModel.isTerminalPanelVisible ? "terminal.fill" : "terminal")
                 }
                 .help(viewModel.isTerminalPanelVisible ? "Hide Terminal" : "Show Terminal")
+
+                if viewModel.isTerminalPanelVisible {
+                    Button {
+                        viewModel.terminalPanelMode = viewModel.terminalPanelMode == .bottom ? .right : .bottom
+                    } label: {
+                        Label(
+                            viewModel.terminalPanelMode == .bottom ? "Split Right" : "Split Bottom",
+                            systemImage: viewModel.terminalPanelMode == .bottom
+                                ? "rectangle.righthalf.inset.filled"
+                                : "rectangle.bottomhalf.inset.filled"
+                        )
+                    }
+                    .help(viewModel.terminalPanelMode == .bottom ? "Split Right" : "Split Bottom")
+                }
             }
         }
         .navigationTitle(navigationTitle)

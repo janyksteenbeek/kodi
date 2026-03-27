@@ -30,14 +30,7 @@ struct TerminalSessionRow: View {
             activityIndicator
         }
         .padding(.vertical, 3)
-        .background {
-            if session.activityState == .busy {
-                ShineEffect(color: session.program.color)
-                    .padding(.horizontal, -10)
-                    .padding(.vertical, -4)
-                    .clipShape(.rect(cornerRadius: 6))
-            }
-        }
+        .shineRowBackground(isActive: session.activityState == .busy, color: session.program.color)
         .tag(tag)
         .contextMenu {
             Button {
@@ -116,6 +109,23 @@ private struct BouncingDots: View {
             }
         }
         .onAppear { animating = true }
+    }
+}
+
+// MARK: - Conditional row background
+
+private extension View {
+    @ViewBuilder
+    func shineRowBackground(isActive: Bool, color: Color) -> some View {
+        if isActive {
+            self.listRowBackground(
+                ShineEffect(color: color)
+                    .padding(.horizontal, 4)
+                    .clipShape(.rect(cornerRadius: 6))
+            )
+        } else {
+            self
+        }
     }
 }
 
