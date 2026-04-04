@@ -8,6 +8,10 @@ struct ContentView: View {
             SidebarView(viewModel: viewModel)
         } detail: {
             DetailContentView(viewModel: viewModel)
+                .inspector(isPresented: $viewModel.isInspectorVisible) {
+                    InspectorView(viewModel: viewModel)
+                        .inspectorColumnWidth(min: 250, ideal: 350, max: 500)
+                }
         }
         .frame(minWidth: 800, minHeight: 500)
     }
@@ -30,7 +34,9 @@ private struct DetailContentView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if let terminal = viewModel.selectedTerminal,
+        if viewModel.editingFilePath != nil {
+            CodeEditorView(viewModel: viewModel)
+        } else if let terminal = viewModel.selectedTerminal,
            !(viewModel.isTerminalPanelVisible && viewModel.panelTerminalIDs.contains(terminal.id)) {
             TerminalTabView(session: terminal, viewModel: viewModel)
         } else {

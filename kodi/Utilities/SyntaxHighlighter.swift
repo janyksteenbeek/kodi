@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct SyntaxHighlighter {
 
@@ -22,6 +23,18 @@ struct SyntaxHighlighter {
             case .type:         Color(nsColor: .systemTeal)
             case .attribute:    Color(nsColor: .systemPurple)
             case .preprocessor: Color(nsColor: .systemBrown)
+            }
+        }
+
+        var nsColor: NSColor {
+            switch self {
+            case .keyword:      .systemPink
+            case .string:       .systemOrange
+            case .comment:      .secondaryLabelColor
+            case .number:       .systemBlue
+            case .type:         .systemTeal
+            case .attribute:    .systemPurple
+            case .preprocessor: .systemBrown
             }
         }
     }
@@ -94,6 +107,86 @@ struct SyntaxHighlighter {
         applyPattern(#"\b[A-Z][a-zA-Z0-9]+\b"#, to: &result, in: nsCode, range: fullRange, type: .type, protected: &protected)
 
         return result
+    }
+
+    // MARK: - NSAttributedString API (for NSTextView)
+
+    static func highlightNS(_ code: String, fileExtension: String, font: NSFont) -> NSAttributedString {
+        let result = NSMutableAttributedString(string: code, attributes: [
+            .font: font,
+            .foregroundColor: NSColor.labelColor
+        ])
+
+        guard !code.isEmpty, let lang = language(for: fileExtension) else {
+            return result
+        }
+
+        let nsCode = code as NSString
+        let fullRange = NSRange(location: 0, length: nsCode.length)
+        var protected = IndexSet()
+
+        if let prefix = lang.lineComment {
+            let pattern = NSRegularExpression.escapedPattern(for: prefix) + ".*$"
+            applyNSPattern(pattern, to: result, in: nsCode, range: fullRange, type: .comment, protected: &protected, options: .anchorsMatchLines)
+        }
+
+        applyNSPattern(#""(?:[^"\\]|\\.)*""#, to: result, in: nsCode, range: fullRange, type: .string, protected: &protected)
+        applyNSPattern(#"'(?:[^'\\]|\\.)*'"#, to: result, in: nsCode, range: fullRange, type: .string, protected: &protected)
+        applyNSPattern(#"`(?:[^`\\]|\\.)*`"#, to: result, in: nsCode, range: fullRange, type: .string, protected: &protected)
+
+        if let pp = lang.preprocessorPattern {
+            applyNSPattern(pp, to: result, in: nsCode, range: fullRange, type: .preprocessor, protected: &protected)
+        }
+        if let attr = lang.attributePattern {
+            applyNSPattern(attr, to: result, in: nsCode, range: fullRange, type: .attribute, protected: &protected)
+        }
+
+        applyNSPattern(#"\b(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|\d[\d_]*\.?[\d_]*(?:[eE][+-]?[\d_]+)?)\b"#, to: result, in: nsCode, range: fullRange, type: .number, protected: &protected)
+
+        for typeKw in lang.typeKeywords {
+            applyNSWord(typeKw, to: result, in: nsCode, range: fullRange, type: .type, protected: &protected)
+        }
+        for kw in lang.keywords {
+            applyNSWord(kw, to: result, in: nsCode, range: fullRange, type: .keyword, protected: &protected)
+        }
+
+        applyNSPattern(#"\b[A-Z][a-zA-Z0-9]+\b"#, to: result, in: nsCode, range: fullRange, type: .type, protected: &protected)
+
+        return result
+    }
+
+    private static func applyNSPattern(
+        _ pattern: String,
+        to result: NSMutableAttributedString,
+        in nsCode: NSString,
+        range: NSRange,
+        type: TokenType,
+        protected: inout IndexSet,
+        options: NSRegularExpression.Options = []
+    ) {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else { return }
+        let matches = regex.matches(in: nsCode as String, range: range)
+
+        for match in matches {
+            let r = match.range
+            guard r.length > 0 else { continue }
+            let intRange = r.location..<(r.location + r.length)
+            if !protected.intersection(IndexSet(integersIn: intRange)).isEmpty { continue }
+            result.addAttribute(.foregroundColor, value: type.nsColor, range: r)
+            protected.insert(integersIn: intRange)
+        }
+    }
+
+    private static func applyNSWord(
+        _ word: String,
+        to result: NSMutableAttributedString,
+        in nsCode: NSString,
+        range: NSRange,
+        type: TokenType,
+        protected: inout IndexSet
+    ) {
+        let pattern = "\\b" + NSRegularExpression.escapedPattern(for: word) + "\\b"
+        applyNSPattern(pattern, to: result, in: nsCode, range: range, type: type, protected: &protected)
     }
 
     // MARK: - Pattern Matching

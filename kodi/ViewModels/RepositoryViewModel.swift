@@ -25,6 +25,15 @@ final class RepositoryViewModel: Identifiable {
     var panelTerminalIDs: [UUID] = []
     var terminalPaneLayout: TerminalPaneLayout
 
+    // Directory tree & editor
+    var directoryFiles: [String] = []
+    var isInspectorVisible: Bool = false
+    var editingFilePath: String?
+    var editingFileContent: String = ""
+    var hasUnsavedChanges: Bool = false
+    var pendingOpenFilePath: String?
+    var showUnsavedAlert: Bool = false
+
     private let gitService: GitService
 
     enum DiffMode: String, CaseIterable {
@@ -112,6 +121,7 @@ final class RepositoryViewModel: Identifiable {
         }
         isLoading = false
         await refreshRemoteStatus()
+        await loadDirectoryTree()
     }
 
     private func loadAllDiffs() async {
@@ -404,6 +414,55 @@ final class RepositoryViewModel: Identifiable {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    // MARK: - Directory Tree & Editor
+
+    func loadDirectoryTree() async {
+        do {
+            directoryFiles = try await gitService.listAllFiles(at: repository.path)
+        } catch {
+            // Silently fail — directory tree is non-critical
+        }
+    }
+
+    func openFile(_ relativePath: String) {
+        if hasUnsavedChanges && editingFilePath != nil {
+            pendingOpenFilePath = relativePath
+            showUnsavedAlert = true
+            return
+        }
+        forceOpenFile(relativePath)
+    }
+
+    func forceOpenFile(_ relativePath: String) {
+        let fullPath = repository.path.appendingPathComponent(relativePath).path
+        guard let data = FileManager.default.contents(atPath: fullPath),
+              let content = String(data: data, encoding: .utf8) else {
+            self.error = "Cannot read file"
+            return
+        }
+        editingFilePath = relativePath
+        editingFileContent = content
+        hasUnsavedChanges = false
+        pendingOpenFilePath = nil
+    }
+
+    func saveCurrentFile() {
+        guard let relativePath = editingFilePath else { return }
+        let fullURL = repository.path.appendingPathComponent(relativePath)
+        do {
+            try editingFileContent.write(to: fullURL, atomically: true, encoding: .utf8)
+            hasUnsavedChanges = false
+        } catch {
+            self.error = "Cannot save file: \(error.localizedDescription)"
+        }
+    }
+
+    func closeEditor() {
+        editingFilePath = nil
+        editingFileContent = ""
+        hasUnsavedChanges = false
     }
 
     private func loadDiff(for path: String) async {

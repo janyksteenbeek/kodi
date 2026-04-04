@@ -49,6 +49,22 @@ struct kodiApp: App {
                         vm.toggleTerminalPanel()
                     }
                     .keyboardShortcut("j", modifiers: .command)
+
+                    Button("Toggle File Inspector") {
+                        vm.isInspectorVisible.toggle()
+                    }
+                    .keyboardShortcut("e", modifiers: [.command, .shift])
+                }
+            }
+
+            // File menu - Save
+            CommandGroup(after: .newItem) {
+                if let vm = focusedVM, vm.editingFilePath != nil {
+                    Button("Save") {
+                        vm.saveCurrentFile()
+                    }
+                    .keyboardShortcut("s", modifiers: .command)
+                    .disabled(!vm.hasUnsavedChanges)
                 }
             }
 

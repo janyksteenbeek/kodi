@@ -98,6 +98,13 @@ struct DiffContentView: View {
                     }
                     .help(viewModel.terminalPanelMode == .bottom ? "Split Right" : "Split Bottom")
                 }
+
+                Button {
+                    viewModel.isInspectorVisible.toggle()
+                } label: {
+                    Label("Files", systemImage: "sidebar.trailing")
+                }
+                .help(viewModel.isInspectorVisible ? "Hide Files" : "Show Files")
             }
         }
         .onChange(of: viewModel.selectedFilePath) {

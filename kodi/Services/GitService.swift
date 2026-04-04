@@ -158,6 +158,18 @@ final class GitService: Sendable {
         return diff
     }
 
+    nonisolated func listAllFiles(at repositoryPath: URL) async throws -> [String] {
+        let tracked = try await runGit(["ls-files"], at: repositoryPath)
+        let untracked = try await runGit(["ls-files", "--others", "--exclude-standard"], at: repositoryPath)
+
+        let combined = (tracked + "\n" + untracked)
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        return Array(Set(combined)).sorted()
+    }
+
     // MARK: - Private
 
     nonisolated private func runGit(_ arguments: [String], at directory: URL) async throws -> String {
