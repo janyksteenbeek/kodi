@@ -11,6 +11,9 @@ struct DiffResult: Identifiable {
     var deletions: Int {
         hunks.flatMap(\.lines).filter { $0.type == .deletion }.count
     }
+    var totalLines: Int {
+        hunks.reduce(0) { $0 + $1.lines.count }
+    }
 }
 
 struct DiffHunk: Identifiable {

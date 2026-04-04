@@ -2,6 +2,8 @@ import SwiftUI
 
 struct DiffContentView: View {
     @Bindable var viewModel: RepositoryViewModel
+    private let largeDiffThreshold = 500
+    @State private var expandedLargeDiffs: Set<UUID> = []
 
     var body: some View {
         Group {
@@ -28,14 +30,31 @@ struct DiffContentView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 20) {
                         ForEach(viewModel.currentDiff) { diffResult in
+                            let isLarge = diffResult.totalLines > largeDiffThreshold
+                            let isExpanded = expandedLargeDiffs.contains(diffResult.id)
+
                             VStack(alignment: .leading, spacing: 0) {
                                 DiffHeaderView(diff: diffResult, viewModel: viewModel)
 
-                                switch viewModel.diffMode {
-                                case .unified:
-                                    UnifiedDiffView(diff: diffResult)
-                                case .sideBySide:
-                                    SideBySideDiffView(diff: diffResult)
+                                if isLarge && !isExpanded {
+                                    VStack(spacing: 8) {
+                                        Text("Large diff hidden — \(diffResult.totalLines) lines")
+                                            .font(.callout)
+                                            .foregroundStyle(.secondary)
+                                        Button("Show Diff") {
+                                            expandedLargeDiffs.insert(diffResult.id)
+                                        }
+                                        .buttonStyle(.bordered)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 24)
+                                } else {
+                                    switch viewModel.diffMode {
+                                    case .unified:
+                                        UnifiedDiffView(diff: diffResult)
+                                    case .sideBySide:
+                                        SideBySideDiffView(diff: diffResult)
+                                    }
                                 }
                             }
                             .clipShape(.rect(cornerRadius: 10))
@@ -80,6 +99,9 @@ struct DiffContentView: View {
                     .help(viewModel.terminalPanelMode == .bottom ? "Split Right" : "Split Bottom")
                 }
             }
+        }
+        .onChange(of: viewModel.selectedFilePath) {
+            expandedLargeDiffs.removeAll()
         }
         .navigationTitle(navigationTitle)
         .navigationSubtitle(navigationSubtitle)
