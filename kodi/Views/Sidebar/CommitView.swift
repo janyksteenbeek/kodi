@@ -39,9 +39,27 @@ struct CommitView: View {
                 }
             }
 
-            TextField("Commit message…", text: $viewModel.commitMessage, axis: .vertical)
-                .lineLimit(2...5)
-                .textFieldStyle(.roundedBorder)
+            HStack(alignment: .bottom, spacing: 4) {
+                TextField("Commit message…", text: $viewModel.commitMessage, axis: .vertical)
+                    .lineLimit(2...5)
+                    .textFieldStyle(.roundedBorder)
+
+                if #available(macOS 26.0, *) {
+                    Button {
+                        Task { await viewModel.generateCommitMessage() }
+                    } label: {
+                        if viewModel.isGeneratingMessage {
+                            ProgressView()
+                                .controlSize(.mini)
+                        } else {
+                            Image(systemName: "sparkles")
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(viewModel.stagedCount == 0 || viewModel.isGeneratingMessage)
+                    .help("Generate commit message")
+                }
+            }
 
             if let error = viewModel.error {
                 Label(error, systemImage: "exclamationmark.triangle.fill")

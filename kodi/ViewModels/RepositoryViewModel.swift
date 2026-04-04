@@ -11,6 +11,7 @@ final class RepositoryViewModel: Identifiable {
     var commitMessage: String = ""
     var isLoading: Bool = false
     var isSyncing: Bool = false
+    var isGeneratingMessage: Bool = false
     var error: String?
     var diffMode: DiffMode
     var hasRemote: Bool = false
@@ -352,6 +353,34 @@ final class RepositoryViewModel: Identifiable {
                 changedFiles[index].isStaged = staged
             }
         }
+    }
+
+    @available(macOS 26.0, *)
+    func generateCommitMessage() async {
+        guard stagedCount > 0 else { return }
+
+        isGeneratingMessage = true
+        error = nil
+        do {
+            // Collect diffs for all files the user has staged in the UI
+            var diff = ""
+            for file in stagedFiles {
+                let fileDiff: String
+                if file.status == .untracked {
+                    fileDiff = try await gitService.diffUntrackedFile(at: repository.path, file: file.path)
+                } else {
+                    fileDiff = try await gitService.diffForFile(at: repository.path, file: file.path, staged: file.isStaged)
+                }
+                if !fileDiff.isEmpty {
+                    diff += fileDiff + "\n"
+                }
+            }
+            let message = try await CommitMessageGenerator().generate(diff: diff, stagedFiles: stagedFiles)
+            commitMessage = message
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isGeneratingMessage = false
     }
 
     func commit() async {
