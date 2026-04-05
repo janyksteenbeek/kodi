@@ -31,7 +31,13 @@ struct EditorPanelView: View {
                         }
                     },
                     content: { session in
-                        EditorNSViewRepresentable(session: session)
+                        if session.isLoading {
+                            ProgressView()
+                                .controlSize(.small)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else {
+                            EditorNSViewRepresentable(session: session)
+                        }
                     },
                     onClose: { session in
                         if session.hasUnsavedChanges {
@@ -74,7 +80,13 @@ struct EditorPanelView: View {
 
     @ViewBuilder
     private func singleEditorView(_ session: EditorSession) -> some View {
-        EditorNSViewRepresentable(session: session)
+        if session.isLoading {
+            ProgressView()
+                .controlSize(.small)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            EditorNSViewRepresentable(session: session)
+        }
     }
 
     // MARK: - Header

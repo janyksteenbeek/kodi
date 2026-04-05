@@ -429,21 +429,34 @@ final class RepositoryViewModel: Identifiable {
             return
         }
 
-        let fullPath = repository.path.appendingPathComponent(relativePath).path
-        guard let data = FileManager.default.contents(atPath: fullPath),
-              let content = String(data: data, encoding: .utf8) else {
-            self.error = "Cannot read file"
-            return
-        }
-
+        // Append a placeholder session immediately so the UI can render a
+        // loading state on the same frame the user clicked. Disk I/O happens
+        // off the main thread; NSView setup runs on MainActor once the read
+        // completes.
         let session = EditorSession(
             relativePath: relativePath,
-            content: content,
+            content: "",
             repositoryPath: repository.path
         )
-        let fontSize = UserDefaults.standard.double(forKey: "diffFontSize")
-        session.setUp(font: .monospacedSystemFont(ofSize: fontSize > 0 ? fontSize : 12, weight: .regular))
         editorSessions.append(session)
+
+        let fullPath = repository.path.appendingPathComponent(relativePath).path
+        Task.detached {
+            let data = FileManager.default.contents(atPath: fullPath)
+            let content = data.flatMap { String(data: $0, encoding: .utf8) }
+            await MainActor.run {
+                // Session may have been closed while reading.
+                guard self.editorSessions.contains(where: { $0.id == session.id }) else { return }
+                guard let content else {
+                    self.error = "Cannot read file"
+                    self.editorSessions.removeAll { $0.id == session.id }
+                    return
+                }
+                session.content = content
+                let fontSize = UserDefaults.standard.double(forKey: "diffFontSize")
+                session.setUp(font: .monospacedSystemFont(ofSize: fontSize > 0 ? fontSize : 12, weight: .regular))
+            }
+        }
     }
 
     func closeEditor(_ session: EditorSession) {

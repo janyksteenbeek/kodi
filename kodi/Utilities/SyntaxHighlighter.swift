@@ -3,6 +3,12 @@ import AppKit
 
 struct SyntaxHighlighter {
 
+    // Skip regex-based highlighting for very large files. The plain
+    // monospaced text is still shown; this just prevents a multi-second
+    // hang on the main thread when opening large source files.
+    static let largeFileCharacterThreshold = 50_000
+    static let largeFileLineThreshold = 2_000
+
     // MARK: - Token Types
 
     enum TokenType {
@@ -146,6 +152,17 @@ struct SyntaxHighlighter {
 
         guard !code.isEmpty, let lang = language(for: fileExtension) else {
             return result
+        }
+
+        // Large-file gate: same spirit as DiffContentView's 500-line threshold.
+        // Plain monospaced text is returned; user can still read/edit.
+        if code.count > largeFileCharacterThreshold {
+            return result
+        }
+        var newlineCount = 0
+        for ch in code where ch == "\n" {
+            newlineCount += 1
+            if newlineCount > largeFileLineThreshold { return result }
         }
 
         let nsCode = code as NSString

@@ -7,6 +7,7 @@ final class EditorSession: Identifiable {
     let relativePath: String
     var content: String
     var hasUnsavedChanges: Bool = false
+    var isLoading: Bool = true
     let repositoryPath: URL
 
     private(set) var scrollView: NSScrollView?
@@ -69,10 +70,21 @@ final class EditorSession: Identifiable {
         scrollView.rulersVisible = true
 
         textView.string = content
-        coordinator.applySyntaxHighlighting()
 
         self.scrollView = scrollView
         self.textView = textView
+        self.isLoading = false
+
+        // Defer highlighting so SwiftUI can render the plain text this frame
+        // and the coloring comes in on the next runloop tick.
+        scheduleInitialHighlight()
+    }
+
+    private func scheduleInitialHighlight() {
+        let coordinator = self.coordinator
+        DispatchQueue.main.async {
+            coordinator?.applySyntaxHighlighting()
+        }
     }
 
     func save() {
