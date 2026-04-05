@@ -95,8 +95,8 @@ struct SidebarView: View {
     }
 
     private func handleSelectionChange(_ selection: Set<String>) {
-        // Close editor when selecting from sidebar
-        viewModel.closeEditor()
+        // Close editors when selecting from sidebar
+        viewModel.closeAllEditors()
 
         if selection.isEmpty {
             Task { await viewModel.selectFiles(viewModel.changedFiles) }

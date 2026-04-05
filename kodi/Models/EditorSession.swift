@@ -1,17 +1,34 @@
 import SwiftUI
 import AppKit
 
-struct CodeEditorNSViewRepresentable: NSViewRepresentable {
-    @Binding var text: String
-    let fileExtension: String
-    let font: NSFont
-    var onTextChange: () -> Void
+@Observable
+final class EditorSession: Identifiable {
+    let id: UUID
+    let relativePath: String
+    var content: String
+    var hasUnsavedChanges: Bool = false
+    let repositoryPath: URL
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+    private(set) var scrollView: NSScrollView?
+    private(set) var textView: NSTextView?
+    private var coordinator: EditorCoordinator?
+
+    var fileName: String {
+        URL(fileURLWithPath: relativePath).lastPathComponent
     }
 
-    func makeNSView(context: Context) -> NSScrollView {
+    var fileExtension: String {
+        URL(fileURLWithPath: relativePath).pathExtension
+    }
+
+    init(id: UUID = UUID(), relativePath: String, content: String, repositoryPath: URL) {
+        self.id = id
+        self.relativePath = relativePath
+        self.content = content
+        self.repositoryPath = repositoryPath
+    }
+
+    func setUp(font: NSFont) {
         let scrollView = NSScrollView()
         let textView = NSTextView()
 
@@ -37,86 +54,93 @@ struct CodeEditorNSViewRepresentable: NSViewRepresentable {
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
 
-        textView.delegate = context.coordinator
-        context.coordinator.textView = textView
+        let coordinator = EditorCoordinator(session: self)
+        textView.delegate = coordinator
+        self.coordinator = coordinator
 
         scrollView.documentView = textView
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
 
-        // Line numbers
         let rulerView = LineNumberRulerView(textView: textView)
         scrollView.verticalRulerView = rulerView
         scrollView.hasVerticalRuler = true
         scrollView.rulersVisible = true
 
-        // Set initial content and highlight
-        textView.string = text
-        context.coordinator.applySyntaxHighlighting()
+        textView.string = content
+        coordinator.applySyntaxHighlighting()
 
-        return scrollView
+        self.scrollView = scrollView
+        self.textView = textView
     }
 
-    func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        guard let textView = scrollView.documentView as? NSTextView else { return }
-
-        // Only update text if it changed externally (not from typing)
-        if !context.coordinator.isUpdating && textView.string != text {
-            let selectedRanges = textView.selectedRanges
-            textView.string = text
-            textView.selectedRanges = selectedRanges
-            context.coordinator.applySyntaxHighlighting()
-        }
-
-        if textView.font != font {
-            textView.font = font
-            context.coordinator.applySyntaxHighlighting()
+    func save() {
+        let fullURL = repositoryPath.appendingPathComponent(relativePath)
+        do {
+            try content.write(to: fullURL, atomically: true, encoding: .utf8)
+            hasUnsavedChanges = false
+        } catch {
+            // Error handled by caller
         }
     }
 
-    // MARK: - Coordinator
+    func updateFont(_ font: NSFont) {
+        textView?.font = font
+        coordinator?.applySyntaxHighlighting()
+    }
 
-    class Coordinator: NSObject, NSTextViewDelegate {
-        var parent: CodeEditorNSViewRepresentable
-        weak var textView: NSTextView?
-        var isUpdating = false
-        private var highlightWorkItem: DispatchWorkItem?
+    func tearDown() {
+        textView?.delegate = nil
+        scrollView?.documentView = nil
+        scrollView = nil
+        textView = nil
+        coordinator = nil
+    }
+}
 
-        init(_ parent: CodeEditorNSViewRepresentable) {
-            self.parent = parent
-        }
+// MARK: - Editor Coordinator
 
-        func textDidChange(_ notification: Notification) {
-            guard let textView else { return }
-            isUpdating = true
-            parent.text = textView.string
-            parent.onTextChange()
-            isUpdating = false
+private class EditorCoordinator: NSObject, NSTextViewDelegate {
+    private weak var session: EditorSession?
+    private var highlightWorkItem: DispatchWorkItem?
 
-            // Debounced syntax highlighting
-            highlightWorkItem?.cancel()
-            let workItem = DispatchWorkItem { [weak self] in
-                DispatchQueue.main.async {
-                    self?.applySyntaxHighlighting()
-                }
+    init(session: EditorSession) {
+        self.session = session
+    }
+
+    func textDidChange(_ notification: Notification) {
+        guard let session, let textView = session.textView else { return }
+        session.content = textView.string
+        session.hasUnsavedChanges = true
+
+        highlightWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            DispatchQueue.main.async {
+                self?.applySyntaxHighlighting()
             }
-            highlightWorkItem = workItem
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
         }
+        highlightWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
+    }
 
-        func applySyntaxHighlighting() {
-            guard let textView, let textStorage = textView.textStorage else { return }
-            let code = textView.string
-            let highlighted = SyntaxHighlighter.highlightNS(code, fileExtension: parent.fileExtension, font: parent.font)
+    func applySyntaxHighlighting() {
+        guard let session, let textView = session.textView,
+              let textStorage = textView.textStorage else { return }
+        let font = textView.font ?? .monospacedSystemFont(ofSize: 12, weight: .regular)
+        let highlighted = SyntaxHighlighter.highlightNS(
+            textView.string,
+            fileExtension: session.fileExtension,
+            font: font
+        )
 
-            textStorage.beginEditing()
-            textStorage.setAttributedString(highlighted)
-            textStorage.endEditing()
+        let selectedRanges = textView.selectedRanges
+        textStorage.beginEditing()
+        textStorage.setAttributedString(highlighted)
+        textStorage.endEditing()
+        textView.selectedRanges = selectedRanges
 
-            // Notify ruler to update line numbers
-            (textView.enclosingScrollView?.verticalRulerView as? LineNumberRulerView)?.needsDisplay = true
-        }
+        (textView.enclosingScrollView?.verticalRulerView as? LineNumberRulerView)?.needsDisplay = true
     }
 }
 

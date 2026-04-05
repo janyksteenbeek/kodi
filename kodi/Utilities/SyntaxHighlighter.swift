@@ -45,8 +45,23 @@ struct SyntaxHighlighter {
         let keywords: Set<String>
         let typeKeywords: Set<String>
         let lineComment: String?
+        let blockComment: (start: String, end: String)?
         let attributePattern: String?
         let preprocessorPattern: String?
+        let variablePattern: String?
+
+        init(keywords: Set<String>, typeKeywords: Set<String>, lineComment: String?,
+             blockComment: (start: String, end: String)? = nil,
+             attributePattern: String? = nil, preprocessorPattern: String? = nil,
+             variablePattern: String? = nil) {
+            self.keywords = keywords
+            self.typeKeywords = typeKeywords
+            self.lineComment = lineComment
+            self.blockComment = blockComment
+            self.attributePattern = attributePattern
+            self.preprocessorPattern = preprocessorPattern
+            self.variablePattern = variablePattern
+        }
     }
 
     // MARK: - Public API
@@ -65,45 +80,57 @@ struct SyntaxHighlighter {
 
         // Order matters: comments & strings first (take precedence over keywords)
 
-        // 1. Line comments
+        // 1. Block comments (/* ... */)
+        if let bc = lang.blockComment {
+            let startEsc = NSRegularExpression.escapedPattern(for: bc.start)
+            let endEsc = NSRegularExpression.escapedPattern(for: bc.end)
+            applyPattern(startEsc + "[\\s\\S]*?" + endEsc, to: &result, in: nsCode, range: fullRange, type: .comment, protected: &protected, options: .dotMatchesLineSeparators)
+        }
+
+        // 2. Line comments
         if let prefix = lang.lineComment {
             let pattern = NSRegularExpression.escapedPattern(for: prefix) + ".*$"
             applyPattern(pattern, to: &result, in: nsCode, range: fullRange, type: .comment, protected: &protected, options: .anchorsMatchLines)
         }
 
-        // 2. Double-quoted strings
+        // 3. Double-quoted strings
         applyPattern(#""(?:[^"\\]|\\.)*""#, to: &result, in: nsCode, range: fullRange, type: .string, protected: &protected)
 
-        // 3. Single-quoted strings
+        // 4. Single-quoted strings
         applyPattern(#"'(?:[^'\\]|\\.)*'"#, to: &result, in: nsCode, range: fullRange, type: .string, protected: &protected)
 
-        // 4. Backtick strings (JS template literals, Go raw strings)
+        // 5. Backtick strings (JS template literals, Go raw strings)
         applyPattern(#"`(?:[^`\\]|\\.)*`"#, to: &result, in: nsCode, range: fullRange, type: .string, protected: &protected)
 
-        // 5. Preprocessor directives
+        // 6. Preprocessor directives
         if let pp = lang.preprocessorPattern {
             applyPattern(pp, to: &result, in: nsCode, range: fullRange, type: .preprocessor, protected: &protected)
         }
 
-        // 6. Attributes (@Something, #[...], etc.)
+        // 7. Attributes (@Something, #[...], etc.)
         if let attr = lang.attributePattern {
             applyPattern(attr, to: &result, in: nsCode, range: fullRange, type: .attribute, protected: &protected)
         }
 
-        // 7. Numbers (hex, binary, octal, float, int)
+        // 8. Variables ($var, etc.)
+        if let vp = lang.variablePattern {
+            applyPattern(vp, to: &result, in: nsCode, range: fullRange, type: .attribute, protected: &protected)
+        }
+
+        // 9. Numbers (hex, binary, octal, float, int)
         applyPattern(#"\b(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|\d[\d_]*\.?[\d_]*(?:[eE][+-]?[\d_]+)?)\b"#, to: &result, in: nsCode, range: fullRange, type: .number, protected: &protected)
 
-        // 8. Type keywords
+        // 10. Type keywords
         for typeKw in lang.typeKeywords {
             applyWord(typeKw, to: &result, in: nsCode, range: fullRange, type: .type, protected: &protected)
         }
 
-        // 9. Keywords
+        // 11. Keywords
         for kw in lang.keywords {
             applyWord(kw, to: &result, in: nsCode, range: fullRange, type: .keyword, protected: &protected)
         }
 
-        // 10. PascalCase identifiers as types
+        // 12. PascalCase identifiers as types
         applyPattern(#"\b[A-Z][a-zA-Z0-9]+\b"#, to: &result, in: nsCode, range: fullRange, type: .type, protected: &protected)
 
         return result
@@ -125,6 +152,12 @@ struct SyntaxHighlighter {
         let fullRange = NSRange(location: 0, length: nsCode.length)
         var protected = IndexSet()
 
+        if let bc = lang.blockComment {
+            let startEsc = NSRegularExpression.escapedPattern(for: bc.start)
+            let endEsc = NSRegularExpression.escapedPattern(for: bc.end)
+            applyNSPattern(startEsc + "[\\s\\S]*?" + endEsc, to: result, in: nsCode, range: fullRange, type: .comment, protected: &protected, options: .dotMatchesLineSeparators)
+        }
+
         if let prefix = lang.lineComment {
             let pattern = NSRegularExpression.escapedPattern(for: prefix) + ".*$"
             applyNSPattern(pattern, to: result, in: nsCode, range: fullRange, type: .comment, protected: &protected, options: .anchorsMatchLines)
@@ -139,6 +172,9 @@ struct SyntaxHighlighter {
         }
         if let attr = lang.attributePattern {
             applyNSPattern(attr, to: result, in: nsCode, range: fullRange, type: .attribute, protected: &protected)
+        }
+        if let vp = lang.variablePattern {
+            applyNSPattern(vp, to: result, in: nsCode, range: fullRange, type: .attribute, protected: &protected)
         }
 
         applyNSPattern(#"\b(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|\d[\d_]*\.?[\d_]*(?:[eE][+-]?[\d_]+)?)\b"#, to: result, in: nsCode, range: fullRange, type: .number, protected: &protected)
@@ -282,6 +318,7 @@ struct SyntaxHighlighter {
                        "Equatable", "Identifiable", "Sendable", "View", "ObservableObject", "Published",
                        "State", "Binding", "Environment", "Observable"],
         lineComment: "//",
+        blockComment: ("/*", "*/"),
         attributePattern: #"@[a-zA-Z_]\w*"#,
         preprocessorPattern: #"#(?:if|elseif|else|endif|selector|available|warning|error)\b"#
     )
@@ -307,8 +344,7 @@ struct SyntaxHighlighter {
         typeKeywords: ["Array", "Object", "String", "Number", "Boolean", "Function", "Symbol", "Map",
                        "Set", "WeakMap", "WeakSet", "Promise", "Error", "RegExp", "Date", "JSON", "Math"],
         lineComment: "//",
-        attributePattern: nil,
-        preprocessorPattern: nil
+        blockComment: ("/*", "*/")
     )
 
     private static let typescript = Language(
@@ -319,8 +355,8 @@ struct SyntaxHighlighter {
                     "Omit", "Exclude", "Extract", "NonNullable", "ReturnType", "Parameters",
                     "Awaited", "Uppercase", "Lowercase"]),
         lineComment: "//",
-        attributePattern: #"@[a-zA-Z_]\w*"#,
-        preprocessorPattern: nil
+        blockComment: ("/*", "*/"),
+        attributePattern: #"@[a-zA-Z_]\w*"#
     )
 
     private static let go = Language(
@@ -331,8 +367,7 @@ struct SyntaxHighlighter {
                        "uint64", "float32", "float64", "complex64", "complex128", "byte", "rune",
                        "string", "bool", "error", "any", "comparable"],
         lineComment: "//",
-        attributePattern: nil,
-        preprocessorPattern: nil
+        blockComment: ("/*", "*/")
     )
 
     private static let rust = Language(
@@ -344,8 +379,8 @@ struct SyntaxHighlighter {
                        "usize", "f32", "f64", "bool", "char", "str", "String", "Vec", "Box", "Rc",
                        "Arc", "Option", "Result", "Some", "None", "Ok", "Err"],
         lineComment: "//",
-        attributePattern: #"#!?\[[\w:,()\s=\"]*\]"#,
-        preprocessorPattern: nil
+        blockComment: ("/*", "*/"),
+        attributePattern: #"#!?\[[\w:,()\s=\"]*\]"#
     )
 
     private static let ruby = Language(
@@ -357,8 +392,7 @@ struct SyntaxHighlighter {
         typeKeywords: ["Integer", "Float", "String", "Array", "Hash", "Symbol", "Proc", "NilClass",
                        "TrueClass", "FalseClass", "IO", "File", "Regexp", "Range", "Struct"],
         lineComment: "#",
-        attributePattern: nil,
-        preprocessorPattern: nil
+        variablePattern: #"@@?[a-zA-Z_]\w*|\$[a-zA-Z_]\w*"#
     )
 
     private static let java = Language(
@@ -373,8 +407,8 @@ struct SyntaxHighlighter {
                        "Character", "Object", "List", "Map", "Set", "ArrayList", "HashMap", "Optional",
                        "Stream", "Collection", "Iterable", "Comparable", "Runnable"],
         lineComment: "//",
-        attributePattern: #"@[a-zA-Z_]\w*"#,
-        preprocessorPattern: nil
+        blockComment: ("/*", "*/"),
+        attributePattern: #"@[a-zA-Z_]\w*"#
     )
 
     private static let kotlin = Language(
@@ -388,8 +422,8 @@ struct SyntaxHighlighter {
                        "Unit", "Nothing", "Any", "Array", "List", "Map", "Set", "Pair", "Triple",
                        "MutableList", "MutableMap", "MutableSet", "Sequence"],
         lineComment: "//",
-        attributePattern: #"@[a-zA-Z_]\w*"#,
-        preprocessorPattern: nil
+        blockComment: ("/*", "*/"),
+        attributePattern: #"@[a-zA-Z_]\w*"#
     )
 
     private static let cLang = Language(
@@ -401,7 +435,7 @@ struct SyntaxHighlighter {
         typeKeywords: ["size_t", "ptrdiff_t", "int8_t", "int16_t", "int32_t", "int64_t",
                        "uint8_t", "uint16_t", "uint32_t", "uint64_t", "bool", "FILE"],
         lineComment: "//",
-        attributePattern: nil,
+        blockComment: ("/*", "*/"),
         preprocessorPattern: #"#\s*(?:include|define|undef|ifdef|ifndef|if|elif|else|endif|pragma|error|warning)\b"#
     )
 
@@ -434,6 +468,7 @@ struct SyntaxHighlighter {
                        "List", "Dictionary", "Task", "IEnumerable", "Action", "Func", "Nullable",
                        "Span", "ReadOnlySpan", "ValueTask"],
         lineComment: "//",
+        blockComment: ("/*", "*/"),
         attributePattern: #"\[[\w.,()\s=\"]*\]"#,
         preprocessorPattern: #"#\s*(?:if|elif|else|endif|define|undef|region|endregion|pragma|nullable)\b"#
     )
@@ -449,8 +484,10 @@ struct SyntaxHighlighter {
         typeKeywords: ["int", "float", "string", "bool", "array", "object", "callable", "iterable",
                        "void", "never", "mixed", "null"],
         lineComment: "//",
+        blockComment: ("/*", "*/"),
         attributePattern: #"#\[[\w\\,()\s=\"]*\]"#,
-        preprocessorPattern: nil
+        preprocessorPattern: #"<\?php\b|\?>"#,
+        variablePattern: #"\$[a-zA-Z_]\w*"#
     )
 
     private static let shell = Language(
@@ -460,8 +497,8 @@ struct SyntaxHighlighter {
                     "break", "continue", "select", "trap", "alias", "unalias"],
         typeKeywords: [],
         lineComment: "#",
-        attributePattern: nil,
-        preprocessorPattern: #"^\s*#!"#
+        preprocessorPattern: #"^\s*#!"#,
+        variablePattern: #"\$\{?[a-zA-Z_]\w*\}?"#
     )
 
     private static let sql = Language(
@@ -497,7 +534,7 @@ struct SyntaxHighlighter {
                     "transparent", "currentColor"],
         typeKeywords: [],
         lineComment: nil,
-        attributePattern: nil,
+        blockComment: ("/*", "*/"),
         preprocessorPattern: #"@(?:media|import|keyframes|font-face|supports|layer|property|container)\b"#
     )
 

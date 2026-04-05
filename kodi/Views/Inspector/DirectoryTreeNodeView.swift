@@ -12,27 +12,36 @@ struct DirectoryTreeNodeView: View {
         }
     }
 
+    private var isOpen: Bool {
+        viewModel.editorSessions.contains { $0.relativePath == node.id }
+    }
+
+    private var changedStatus: ChangedFile.FileStatus? {
+        viewModel.changedFiles.first { $0.path == node.id }?.status
+    }
+
     private var fileRow: some View {
-        Button {
-            viewModel.openFile(node.id)
-        } label: {
-            HStack(spacing: 6) {
-                FileIconView(fileName: node.name)
-                Text(node.name)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Spacer()
+        HStack(spacing: 6) {
+            FileIconView(fileName: node.name)
+            Text(node.name)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 4)
+            if isOpen {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 6, height: 6)
+                    .help("Open in editor")
             }
-            .contentShape(Rectangle())
+            if let status = changedStatus {
+                Text(status.rawValue)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(status.color)
+                    .help(status.displayName)
+            }
         }
-        .buttonStyle(.plain)
-        .padding(.vertical, 1)
-        .background(
-            viewModel.editingFilePath == node.id
-                ? Color.accentColor.opacity(0.15)
-                : Color.clear
-        )
-        .clipShape(.rect(cornerRadius: 4))
+        .contentShape(Rectangle())
+        .tag(node.id)
     }
 }
 

@@ -68,68 +68,8 @@ struct DiffContentView: View {
                 }
             }
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .automatic) {
-                Picker("Diff Mode", selection: $viewModel.diffMode) {
-                    ForEach(RepositoryViewModel.DiffMode.allCases, id: \.self) { mode in
-                        Label(mode.rawValue, systemImage: mode.icon)
-                            .tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                Button {
-                    viewModel.toggleTerminalPanel()
-                } label: {
-                    Label("Terminal", systemImage: viewModel.isTerminalPanelVisible ? "terminal.fill" : "terminal")
-                }
-                .help(viewModel.isTerminalPanelVisible ? "Hide Terminal" : "Show Terminal")
-
-                if viewModel.isTerminalPanelVisible {
-                    Button {
-                        viewModel.terminalPanelMode = viewModel.terminalPanelMode == .bottom ? .right : .bottom
-                    } label: {
-                        Label(
-                            viewModel.terminalPanelMode == .bottom ? "Split Right" : "Split Bottom",
-                            systemImage: viewModel.terminalPanelMode == .bottom
-                                ? "rectangle.righthalf.inset.filled"
-                                : "rectangle.bottomhalf.inset.filled"
-                        )
-                    }
-                    .help(viewModel.terminalPanelMode == .bottom ? "Split Right" : "Split Bottom")
-                }
-
-                Button {
-                    viewModel.isInspectorVisible.toggle()
-                } label: {
-                    Label("Files", systemImage: "sidebar.trailing")
-                }
-                .help(viewModel.isInspectorVisible ? "Hide Files" : "Show Files")
-            }
-        }
         .onChange(of: viewModel.selectedFilePath) {
             expandedLargeDiffs.removeAll()
         }
-        .navigationTitle(navigationTitle)
-        .navigationSubtitle(navigationSubtitle)
-    }
-
-    private var navigationTitle: String {
-        if let sel = viewModel.selectedFilePath,
-           sel.hasPrefix(RepositoryViewModel.folderTagPrefix) {
-            return String(sel.dropFirst(RepositoryViewModel.folderTagPrefix.count))
-        }
-        return viewModel.selectedFile?.fileName ?? viewModel.repository.displayName
-    }
-
-    private var navigationSubtitle: String {
-        if viewModel.selectedFilePath == nil {
-            return "\(viewModel.currentDiff.count) changed file\(viewModel.currentDiff.count == 1 ? "" : "s")"
-        }
-        if let sel = viewModel.selectedFilePath,
-           sel.hasPrefix(RepositoryViewModel.folderTagPrefix) {
-            return ""
-        }
-        return viewModel.selectedFile?.directory ?? ""
     }
 }

@@ -23,16 +23,22 @@ final class RepositoryViewModel: Identifiable {
     var isTerminalPanelVisible: Bool = false
     var terminalPanelMode: TerminalPanelMode
     var panelTerminalIDs: [UUID] = []
-    var terminalPaneLayout: TerminalPaneLayout
+    var terminalPaneLayout: PaneLayout
+    var editorPaneLayout: PaneLayout
 
     // Directory tree & editor
     var directoryFiles: [String] = []
     var isInspectorVisible: Bool = false
-    var editingFilePath: String?
-    var editingFileContent: String = ""
-    var hasUnsavedChanges: Bool = false
-    var pendingOpenFilePath: String?
+    var editorSessions: [EditorSession] = []
+    var pendingCloseSession: EditorSession?
     var showUnsavedAlert: Bool = false
+    var inspectorSelection: Set<String> = []
+
+    var isEditorVisible: Bool { !editorSessions.isEmpty }
+
+    var hasAnyUnsavedChanges: Bool {
+        editorSessions.contains { $0.hasUnsavedChanges }
+    }
 
     private let gitService: GitService
 
@@ -60,19 +66,7 @@ final class RepositoryViewModel: Identifiable {
         }
     }
 
-    enum TerminalPaneLayout: String, CaseIterable {
-        case horizontal = "Side by Side"
-        case vertical = "Stacked"
-        case grid = "Grid"
-
-        var icon: String {
-            switch self {
-            case .horizontal: "rectangle.split.3x1"
-            case .vertical: "rectangle.split.1x2"
-            case .grid: "square.grid.2x2"
-            }
-        }
-    }
+    typealias TerminalPaneLayout = PaneLayout
 
     init(repository: GitRepository, gitService: GitService) {
         self.id = repository.id
@@ -86,7 +80,8 @@ final class RepositoryViewModel: Identifiable {
         self.terminalPanelMode = TerminalPanelMode(rawValue: savedPanelMode == "right" ? "Right" : "Bottom") ?? .right
 
         let savedPaneLayout = UserDefaults.standard.string(forKey: "defaultTerminalPaneLayout") ?? "Side by Side"
-        self.terminalPaneLayout = TerminalPaneLayout(rawValue: savedPaneLayout) ?? .horizontal
+        self.terminalPaneLayout = PaneLayout(rawValue: savedPaneLayout) ?? .horizontal
+        self.editorPaneLayout = .horizontal
     }
 
     var stagedFiles: [ChangedFile] {
@@ -427,42 +422,42 @@ final class RepositoryViewModel: Identifiable {
     }
 
     func openFile(_ relativePath: String) {
-        if hasUnsavedChanges && editingFilePath != nil {
-            pendingOpenFilePath = relativePath
-            showUnsavedAlert = true
+        // If already open, bring to front
+        if let index = editorSessions.firstIndex(where: { $0.relativePath == relativePath }) {
+            let session = editorSessions.remove(at: index)
+            editorSessions.append(session)
             return
         }
-        forceOpenFile(relativePath)
-    }
 
-    func forceOpenFile(_ relativePath: String) {
         let fullPath = repository.path.appendingPathComponent(relativePath).path
         guard let data = FileManager.default.contents(atPath: fullPath),
               let content = String(data: data, encoding: .utf8) else {
             self.error = "Cannot read file"
             return
         }
-        editingFilePath = relativePath
-        editingFileContent = content
-        hasUnsavedChanges = false
-        pendingOpenFilePath = nil
+
+        let session = EditorSession(
+            relativePath: relativePath,
+            content: content,
+            repositoryPath: repository.path
+        )
+        let fontSize = UserDefaults.standard.double(forKey: "diffFontSize")
+        session.setUp(font: .monospacedSystemFont(ofSize: fontSize > 0 ? fontSize : 12, weight: .regular))
+        editorSessions.append(session)
     }
 
-    func saveCurrentFile() {
-        guard let relativePath = editingFilePath else { return }
-        let fullURL = repository.path.appendingPathComponent(relativePath)
-        do {
-            try editingFileContent.write(to: fullURL, atomically: true, encoding: .utf8)
-            hasUnsavedChanges = false
-        } catch {
-            self.error = "Cannot save file: \(error.localizedDescription)"
-        }
+    func closeEditor(_ session: EditorSession) {
+        session.tearDown()
+        editorSessions.removeAll { $0.id == session.id }
     }
 
-    func closeEditor() {
-        editingFilePath = nil
-        editingFileContent = ""
-        hasUnsavedChanges = false
+    func closeAllEditors() {
+        for session in editorSessions { session.tearDown() }
+        editorSessions.removeAll()
+    }
+
+    func saveEditor(_ session: EditorSession) {
+        session.save()
     }
 
     private func loadDiff(for path: String) async {

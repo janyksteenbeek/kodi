@@ -59,12 +59,18 @@ struct kodiApp: App {
 
             // File menu - Save
             CommandGroup(after: .newItem) {
-                if let vm = focusedVM, vm.editingFilePath != nil {
+                if let vm = focusedVM, vm.isEditorVisible {
                     Button("Save") {
-                        vm.saveCurrentFile()
+                        // Save the focused editor (whose textView is first responder)
+                        if let firstResponder = NSApp.keyWindow?.firstResponder as? NSTextView,
+                           let session = vm.editorSessions.first(where: { $0.textView === firstResponder }) {
+                            session.save()
+                        } else if let session = vm.editorSessions.last {
+                            session.save()
+                        }
                     }
                     .keyboardShortcut("s", modifiers: .command)
-                    .disabled(!vm.hasUnsavedChanges)
+                    .disabled(!vm.hasAnyUnsavedChanges)
                 }
             }
 
