@@ -173,35 +173,40 @@ final class GitService: Sendable {
     // MARK: - Private
 
     nonisolated private func runGit(_ arguments: [String], at directory: URL) async throws -> String {
-        try await withCheckedThrowingContinuation { continuation in
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-            process.arguments = arguments
-            process.currentDirectoryURL = directory
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = arguments
+        process.currentDirectoryURL = directory
 
-            let stdoutPipe = Pipe()
-            let stderrPipe = Pipe()
-            process.standardOutput = stdoutPipe
-            process.standardError = stderrPipe
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
 
-            process.terminationHandler = { _ in
-                let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-                let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+        try process.run()
 
-                if process.terminationStatus == 0 {
-                    continuation.resume(returning: stdout)
-                } else {
-                    continuation.resume(throwing: GitError.commandFailed(stderr.isEmpty ? stdout : stderr))
-                }
-            }
+        // Drain both pipes concurrently while the process is running. If we
+        // waited until termination to read (as the previous implementation
+        // did), large outputs would fill the ~64 KB pipe buffer, block git
+        // on write, and cause an indefinite deadlock — the very symptom
+        // behind "refresh loads forever" for repos with any sizeable diff.
+        async let stdoutData: Data = Task.detached(priority: .userInitiated) {
+            stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        }.value
+        async let stderrData: Data = Task.detached(priority: .userInitiated) {
+            stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        }.value
 
-            do {
-                try process.run()
-            } catch {
-                continuation.resume(throwing: error)
-            }
+        let (stdoutBytes, stderrBytes) = await (stdoutData, stderrData)
+        process.waitUntilExit()
+
+        let stdout = String(data: stdoutBytes, encoding: .utf8) ?? ""
+        let stderr = String(data: stderrBytes, encoding: .utf8) ?? ""
+
+        if process.terminationStatus == 0 {
+            return stdout
+        } else {
+            throw GitError.commandFailed(stderr.isEmpty ? stdout : stderr)
         }
     }
 
