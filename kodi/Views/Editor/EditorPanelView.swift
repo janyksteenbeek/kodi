@@ -1,4 +1,6 @@
 import SwiftUI
+import CodeEditSourceEditor
+import CodeEditLanguages
 
 struct EditorPanelView: View {
     @Bindable var viewModel: RepositoryViewModel
@@ -36,7 +38,7 @@ struct EditorPanelView: View {
                                 .controlSize(.small)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else {
-                            EditorNSViewRepresentable(session: session)
+                            SourceEditorView(session: session, fontSize: fontSize)
                         }
                     },
                     onClose: { session in
@@ -48,12 +50,6 @@ struct EditorPanelView: View {
                         }
                     }
                 )
-            }
-        }
-        .onChange(of: fontSize) {
-            let font = NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
-            for session in viewModel.editorSessions {
-                session.updateFont(font)
             }
         }
         .alert("Unsaved Changes", isPresented: $viewModel.showUnsavedAlert) {
@@ -85,7 +81,7 @@ struct EditorPanelView: View {
                 .controlSize(.small)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            EditorNSViewRepresentable(session: session)
+            SourceEditorView(session: session, fontSize: fontSize)
         }
     }
 
@@ -157,41 +153,95 @@ struct EditorPanelView: View {
     }
 }
 
-// MARK: - Editor NSView Representable
+// MARK: - Source Editor Wrapper
 
-struct EditorNSViewRepresentable: NSViewRepresentable {
-    let session: EditorSession
+private struct SourceEditorView: View {
+    @Bindable var session: EditorSession
+    let fontSize: Double
 
-    func makeNSView(context: Context) -> NSView {
-        let container = NSView()
-        attachEditorView(to: container)
-        return container
+    @Environment(\.colorScheme) private var colorScheme
+
+    @State private var editorState = SourceEditorState()
+    @State private var lastSavedContent: String = ""
+
+    private var theme: EditorTheme {
+        colorScheme == .dark ? .defaultDark : .defaultLight
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {
-        guard let sv = session.scrollView else { return }
-        if sv.superview == nsView { return }
+    private var font: NSFont {
+        .monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
+    }
 
-        for subview in nsView.subviews {
-            subview.removeFromSuperview()
+    var body: some View {
+        SourceEditor(
+            $session.content,
+            language: session.language,
+            configuration: SourceEditorConfiguration(
+                appearance: .init(
+                    theme: theme,
+                    font: font,
+                    wrapLines: true
+                ),
+                peripherals: .init(showMinimap: false)
+            ),
+            state: $editorState
+        )
+        .onAppear {
+            lastSavedContent = session.content
         }
-        attachEditorView(to: nsView)
+        .onChange(of: session.content) {
+            session.hasUnsavedChanges = session.content != lastSavedContent
+        }
+        .onChange(of: session.hasUnsavedChanges) {
+            if !session.hasUnsavedChanges {
+                lastSavedContent = session.content
+            }
+        }
+    }
+}
+
+// MARK: - Default Themes
+
+extension EditorTheme {
+    static var defaultLight: EditorTheme {
+        EditorTheme(
+            text: Attribute(color: .labelColor),
+            insertionPoint: .labelColor,
+            invisibles: Attribute(color: .tertiaryLabelColor),
+            background: NSColor.textBackgroundColor.usingColorSpace(.sRGB) ?? .white,
+            lineHighlight: (NSColor.selectedContentBackgroundColor.usingColorSpace(.sRGB) ?? .gray).withAlphaComponent(0.1),
+            selection: NSColor.selectedTextBackgroundColor.usingColorSpace(.sRGB) ?? .selectedTextBackgroundColor,
+            keywords: Attribute(color: .systemPink, bold: true),
+            commands: Attribute(color: .systemTeal),
+            types: Attribute(color: .systemBlue),
+            attributes: Attribute(color: .systemPurple),
+            variables: Attribute(color: .systemCyan),
+            values: Attribute(color: .systemIndigo),
+            numbers: Attribute(color: .systemBlue),
+            strings: Attribute(color: .systemRed),
+            characters: Attribute(color: .systemOrange),
+            comments: Attribute(color: .secondaryLabelColor)
+        )
     }
 
-    private func attachEditorView(to container: NSView) {
-        guard let sv = session.scrollView else { return }
-
-        sv.removeFromSuperview()
-        sv.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(sv)
-        NSLayoutConstraint.activate([
-            sv.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            sv.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            sv.topAnchor.constraint(equalTo: container.topAnchor),
-            sv.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-        ])
-
-        sv.needsLayout = true
-        sv.needsDisplay = true
+    static var defaultDark: EditorTheme {
+        EditorTheme(
+            text: Attribute(color: .labelColor),
+            insertionPoint: .labelColor,
+            invisibles: Attribute(color: .tertiaryLabelColor),
+            background: NSColor.textBackgroundColor.usingColorSpace(.sRGB) ?? .black,
+            lineHighlight: (NSColor.selectedContentBackgroundColor.usingColorSpace(.sRGB) ?? .gray).withAlphaComponent(0.1),
+            selection: NSColor.selectedTextBackgroundColor.usingColorSpace(.sRGB) ?? .selectedTextBackgroundColor,
+            keywords: Attribute(color: .systemPink, bold: true),
+            commands: Attribute(color: .systemTeal),
+            types: Attribute(color: .systemCyan),
+            attributes: Attribute(color: .systemOrange),
+            variables: Attribute(color: .systemBlue),
+            values: Attribute(color: .systemPurple),
+            numbers: Attribute(color: .systemYellow),
+            strings: Attribute(color: .systemRed),
+            characters: Attribute(color: .systemOrange),
+            comments: Attribute(color: .secondaryLabelColor)
+        )
     }
 }

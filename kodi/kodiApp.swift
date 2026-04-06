@@ -3,6 +3,10 @@ import SwiftUI
 class KodiAppDelegate: NSObject, NSApplicationDelegate {
     var appState: AppState?
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        NSWindow.allowsAutomaticWindowTabbing = true
+    }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         appState?.isTerminating = true
         return .terminateNow
@@ -74,11 +78,7 @@ struct kodiApp: App {
             CommandGroup(after: .newItem) {
                 if let vm = focusedVM, vm.isEditorVisible {
                     Button("Save") {
-                        // Save the focused editor (whose textView is first responder)
-                        if let firstResponder = NSApp.keyWindow?.firstResponder as? NSTextView,
-                           let session = vm.editorSessions.first(where: { $0.textView === firstResponder }) {
-                            session.save()
-                        } else if let session = vm.editorSessions.last {
+                        if let session = vm.editorSessions.last(where: { $0.hasUnsavedChanges }) {
                             session.save()
                         }
                     }
@@ -226,11 +226,22 @@ private struct RepoWindowContent: View {
                 let savedIDs = appState.loadSavedRepositories()
                 if let first = savedIDs.first {
                     repoID = first
-                    for id in savedIDs.dropFirst() {
-                        openWindow(value: id)
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        mergeAllWindowsAsTabs()
+                    let remaining = Array(savedIDs.dropFirst())
+                    if !remaining.isEmpty {
+                        // Wait for the primary window to appear, set it to prefer tabs,
+                        // then open the rest — macOS will add them as tabs directly.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            if let primary = NSApp.windows.first(where: { $0.isVisible }) {
+                                primary.tabbingMode = .preferred
+                            }
+                            for id in remaining {
+                                openWindow(value: id)
+                            }
+                            // Safety fallback in case auto-tabbing didn't merge all
+                            DispatchQueue.main.async {
+                                mergeAllWindowsAsTabs()
+                            }
+                        }
                     }
                 }
             }

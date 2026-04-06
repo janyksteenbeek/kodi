@@ -453,19 +453,16 @@ final class RepositoryViewModel: Identifiable {
                     return
                 }
                 session.content = content
-                let fontSize = UserDefaults.standard.double(forKey: "diffFontSize")
-                session.setUp(font: .monospacedSystemFont(ofSize: fontSize > 0 ? fontSize : 12, weight: .regular))
+                session.isLoading = false
             }
         }
     }
 
     func closeEditor(_ session: EditorSession) {
-        session.tearDown()
         editorSessions.removeAll { $0.id == session.id }
     }
 
     func closeAllEditors() {
-        for session in editorSessions { session.tearDown() }
         editorSessions.removeAll()
     }
 

@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		A601C9DD2F75A3590010F515 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = A6CFE1112F74830000D3DEFF /* SwiftTerm */; };
+		B1CE00042F80000100000004 /* CodeEditSourceEditor in Frameworks */ = {isa = PBXBuildFile; productRef = B1CE00022F80000100000002 /* CodeEditSourceEditor */; };
+		B1CE00052F80000100000005 /* CodeEditLanguages in Frameworks */ = {isa = PBXBuildFile; productRef = B1CE00032F80000100000003 /* CodeEditLanguages */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +30,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A601C9DD2F75A3590010F515 /* SwiftTerm in Frameworks */,
+				B1CE00042F80000100000004 /* CodeEditSourceEditor in Frameworks */,
+				B1CE00052F80000100000005 /* CodeEditLanguages in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +75,8 @@
 			name = kodi;
 			packageProductDependencies = (
 				A6CFE1112F74830000D3DEFF /* SwiftTerm */,
+				B1CE00022F80000100000002 /* CodeEditSourceEditor */,
+				B1CE00032F80000100000003 /* CodeEditLanguages */,
 			);
 			productName = kodi;
 			productReference = A6CFE0FB2F74829D00D3DEFF /* kodi.app */;
@@ -102,6 +108,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A6CFE1102F74830000D3DEFF /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				B1CE00012F80000100000001 /* XCRemoteSwiftPackageReference "CodeEditSourceEditor" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A6CFE0FC2F74829D00D3DEFF /* Products */;
@@ -350,6 +357,14 @@
 				minimumVersion = 1.0.0;
 			};
 		};
+		B1CE00012F80000100000001 /* XCRemoteSwiftPackageReference "CodeEditSourceEditor" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CodeEditApp/CodeEditSourceEditor.git";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 0.15.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -357,6 +372,15 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A6CFE1102F74830000D3DEFF /* XCRemoteSwiftPackageReference "SwiftTerm" */;
 			productName = SwiftTerm;
+		};
+		B1CE00022F80000100000002 /* CodeEditSourceEditor */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B1CE00012F80000100000001 /* XCRemoteSwiftPackageReference "CodeEditSourceEditor" */;
+			productName = CodeEditSourceEditor;
+		};
+		B1CE00032F80000100000003 /* CodeEditLanguages */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CodeEditLanguages;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
