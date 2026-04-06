@@ -50,8 +50,23 @@ struct InspectorView: View {
         // confirms with Enter.
         guard newValue.count == 1, let path = newValue.first else { return }
         if previous == newValue { return }
+
+        // Folders should only expand/collapse, not open in the editor.
+        if isFolder(path, in: tree) {
+            viewModel.inspectorSelection = previous
+            return
+        }
+
         viewModel.closeAllEditors()
         viewModel.openFile(path)
+    }
+
+    private func isFolder(_ path: String, in nodes: [DirectoryTreeNode]) -> Bool {
+        for node in nodes {
+            if node.id == path { return node.isFolder }
+            if node.isFolder, isFolder(path, in: node.children) { return true }
+        }
+        return false
     }
 
     private func openFiles(_ paths: [String]) {

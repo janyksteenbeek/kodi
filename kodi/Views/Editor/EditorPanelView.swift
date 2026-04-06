@@ -4,7 +4,7 @@ import CodeEditLanguages
 
 struct EditorPanelView: View {
     @Bindable var viewModel: RepositoryViewModel
-    @AppStorage("diffFontSize") private var fontSize: Double = 12
+    @AppStorage("editorFontSize") private var fontSize: Double = 12
 
     var body: some View {
         VStack(spacing: 0) {
@@ -161,15 +161,59 @@ private struct SourceEditorView: View {
 
     @Environment(\.colorScheme) private var colorScheme
 
+    @AppStorage("editorThemeOverride") private var themeOverride = "system"
+    @AppStorage("editorShowMinimap") private var showMinimap = false
+    @AppStorage("editorShowGutter") private var showGutter = true
+    @AppStorage("editorShowFoldingRibbon") private var showFoldingRibbon = true
+    @AppStorage("editorWrapLines") private var wrapLines = true
+    @AppStorage("editorTabWidth") private var tabWidth = 4
+    @AppStorage("editorIndentWithTabs") private var indentWithTabs = false
+    @AppStorage("editorLineHeight") private var lineHeight = 1.2
+    @AppStorage("editorLetterSpacing") private var letterSpacing = 1.0
+    @AppStorage("editorBracketEmphasis") private var bracketEmphasis = "flash"
+    @AppStorage("editorShowReformattingGuide") private var showReformattingGuide = false
+    @AppStorage("editorReformatColumn") private var reformatColumn = 80
+    @AppStorage("editorShowInvisibleSpaces") private var showInvisibleSpaces = false
+    @AppStorage("editorShowInvisibleTabs") private var showInvisibleTabs = false
+    @AppStorage("editorShowInvisibleLineEndings") private var showInvisibleLineEndings = false
+
     @State private var editorState = SourceEditorState()
     @State private var lastSavedContent: String = ""
 
     private var theme: EditorTheme {
-        colorScheme == .dark ? .defaultDark : .defaultLight
+        switch themeOverride {
+        case "light": return .defaultLight
+        case "dark": return .defaultDark
+        default: return colorScheme == .dark ? .defaultDark : .defaultLight
+        }
     }
 
     private var font: NSFont {
         .monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
+    }
+
+    private var bracketPairEmphasis: BracketPairEmphasis? {
+        switch bracketEmphasis {
+        case "flash": return .flash
+        case "bordered": return .bordered(color: .secondaryLabelColor)
+        case "underline": return .underline(color: .secondaryLabelColor)
+        default: return nil
+        }
+    }
+
+    private var indentOption: IndentOption {
+        indentWithTabs ? .tab : .spaces(count: tabWidth)
+    }
+
+    private var invisibleCharacters: InvisibleCharactersConfiguration {
+        if !showInvisibleSpaces && !showInvisibleTabs && !showInvisibleLineEndings {
+            return .empty
+        }
+        return InvisibleCharactersConfiguration(
+            showSpaces: showInvisibleSpaces,
+            showTabs: showInvisibleTabs,
+            showLineEndings: showInvisibleLineEndings
+        )
     }
 
     var body: some View {
@@ -180,9 +224,23 @@ private struct SourceEditorView: View {
                 appearance: .init(
                     theme: theme,
                     font: font,
-                    wrapLines: true
+                    lineHeightMultiple: lineHeight,
+                    letterSpacing: letterSpacing,
+                    wrapLines: wrapLines,
+                    tabWidth: tabWidth,
+                    bracketPairEmphasis: bracketPairEmphasis
                 ),
-                peripherals: .init(showMinimap: false)
+                behavior: .init(
+                    indentOption: indentOption,
+                    reformatAtColumn: reformatColumn
+                ),
+                peripherals: .init(
+                    showGutter: showGutter,
+                    showMinimap: showMinimap,
+                    showReformattingGuide: showReformattingGuide,
+                    showFoldingRibbon: showFoldingRibbon,
+                    invisibleCharactersConfiguration: invisibleCharacters
+                )
             ),
             state: $editorState
         )

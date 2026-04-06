@@ -12,6 +12,8 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "gear") }
             AppearanceSettingsTab()
                 .tabItem { Label("Appearance", systemImage: "paintbrush") }
+            EditorSettingsTab()
+                .tabItem { Label("Editor", systemImage: "curlybraces") }
             CodeReviewSettingsTab()
                 .tabItem { Label("Code Review", systemImage: "doc.text.magnifyingglass") }
             TerminalSettingsTab()
@@ -142,6 +144,178 @@ Toggle(isOn: $showFileIcons) {
                 Text("Sidebar")
             } footer: {
                 Text("The default width of the sidebar when opening a new window.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - Editor
+
+private struct EditorSettingsTab: View {
+    @AppStorage("editorFontSize") private var fontSize = 12.0
+    @AppStorage("editorThemeOverride") private var themeOverride = "system"
+    @AppStorage("editorShowMinimap") private var showMinimap = false
+    @AppStorage("editorShowGutter") private var showGutter = true
+    @AppStorage("editorShowFoldingRibbon") private var showFoldingRibbon = true
+    @AppStorage("editorWrapLines") private var wrapLines = true
+    @AppStorage("editorTabWidth") private var tabWidth = 4
+    @AppStorage("editorIndentWithTabs") private var indentWithTabs = false
+    @AppStorage("editorLineHeight") private var lineHeight = 1.2
+    @AppStorage("editorLetterSpacing") private var letterSpacing = 1.0
+    @AppStorage("editorBracketEmphasis") private var bracketEmphasis = "flash"
+    @AppStorage("editorShowReformattingGuide") private var showReformattingGuide = false
+    @AppStorage("editorReformatColumn") private var reformatColumn = 80
+    @AppStorage("editorShowInvisibleSpaces") private var showInvisibleSpaces = false
+    @AppStorage("editorShowInvisibleTabs") private var showInvisibleTabs = false
+    @AppStorage("editorShowInvisibleLineEndings") private var showInvisibleLineEndings = false
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Theme", selection: $themeOverride) {
+                    Text("Follow System").tag("system")
+                    Text("Always Light").tag("light")
+                    Text("Always Dark").tag("dark")
+                }
+            } header: {
+                Text("Theme")
+            } footer: {
+                Text("Override the editor color scheme independently from the app appearance.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+
+            Section {
+                HStack {
+                    Text("Font Size")
+                    Spacer()
+                    TextField("", value: $fontSize, format: .number)
+                        .frame(width: 45)
+                        .multilineTextAlignment(.trailing)
+                    Stepper("", value: $fontSize, in: 9...36, step: 1)
+                        .labelsHidden()
+                    Text("pt")
+                        .foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("Line Height")
+                    Spacer()
+                    TextField("", value: $lineHeight, format: .number.precision(.fractionLength(1)))
+                        .frame(width: 45)
+                        .multilineTextAlignment(.trailing)
+                    Stepper("", value: $lineHeight, in: 1.0...2.0, step: 0.1)
+                        .labelsHidden()
+                    Text("×")
+                        .foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("Letter Spacing")
+                    Spacer()
+                    TextField("", value: $letterSpacing, format: .number.precision(.fractionLength(1)))
+                        .frame(width: 45)
+                        .multilineTextAlignment(.trailing)
+                    Stepper("", value: $letterSpacing, in: 0.5...2.0, step: 0.1)
+                        .labelsHidden()
+                    Text("×")
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Font & Spacing")
+            }
+
+            Section {
+                HStack {
+                    Text("Tab Width")
+                    Spacer()
+                    TextField("", value: $tabWidth, format: .number)
+                        .frame(width: 40)
+                        .multilineTextAlignment(.trailing)
+                    Stepper("", value: $tabWidth, in: 1...8, step: 1)
+                        .labelsHidden()
+                    Text("spaces")
+                        .foregroundStyle(.secondary)
+                }
+                Picker("Indent Using", selection: $indentWithTabs) {
+                    Text("Spaces").tag(false)
+                    Text("Tabs").tag(true)
+                }
+                Toggle(isOn: $wrapLines) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Wrap lines")
+                        Text("Soft-wrap long lines instead of horizontal scrolling.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Picker("Bracket Emphasis", selection: $bracketEmphasis) {
+                    Text("Flash").tag("flash")
+                    Text("Bordered").tag("bordered")
+                    Text("Underline").tag("underline")
+                    Text("Off").tag("off")
+                }
+            } header: {
+                Text("Editing")
+            }
+
+            Section {
+                Toggle(isOn: $showMinimap) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show minimap")
+                        Text("Display a minimap of the file on the right side of the editor.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Toggle(isOn: $showGutter) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show line numbers")
+                        Text("Display line numbers in the editor gutter.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Toggle(isOn: $showFoldingRibbon) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show folding ribbon")
+                        Text("Show code folding controls in the gutter.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Toggle(isOn: $showReformattingGuide) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show column guide")
+                        Text("Display a vertical line at the specified column.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if showReformattingGuide {
+                    HStack {
+                        Text("Guide Column")
+                        Spacer()
+                        TextField("", value: $reformatColumn, format: .number)
+                            .frame(width: 45)
+                            .multilineTextAlignment(.trailing)
+                        Stepper("", value: $reformatColumn, in: 40...200, step: 10)
+                            .labelsHidden()
+                    }
+                }
+            } header: {
+                Text("Display")
+            }
+
+            Section {
+                Toggle("Spaces", isOn: $showInvisibleSpaces)
+                Toggle("Tabs", isOn: $showInvisibleTabs)
+                Toggle("Line Endings", isOn: $showInvisibleLineEndings)
+            } header: {
+                Text("Invisible Characters")
+            } footer: {
+                Text("Show symbols for whitespace and line ending characters.")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
