@@ -4,6 +4,7 @@ import SwiftUI
 final class AppState {
     var repositories: [GitRepository] = []
     var repositoryViewModels: [UUID: RepositoryViewModel] = [:]
+    var isTerminating = false
 
     private let fileWatcher = FileWatcherService()
     private let gitService = GitService()
@@ -49,14 +50,22 @@ final class AppState {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
+        // If this repository is already open, switch to its existing tab
+        if let existing = repositories.first(where: { $0.path == url }) {
+            openRepositoryTab?(existing.id)
+            return
+        }
+
         Task {
             guard await gitService.isGitRepository(at: url) else { return }
 
-            let bookmarkData = try? BookmarkManager.saveBookmark(for: url)
-            let repo = GitRepository(path: url, bookmarkData: bookmarkData)
-            _ = addRepositoryDirectly(repo)
-            saveRepositories()
-            openRepositoryTab?(repo.id)
+            await MainActor.run {
+                let bookmarkData = try? BookmarkManager.saveBookmark(for: url)
+                let repo = GitRepository(path: url, bookmarkData: bookmarkData)
+                _ = addRepositoryDirectly(repo)
+                saveRepositories()
+                openRepositoryTab?(repo.id)
+            }
         }
     }
 

@@ -1,7 +1,17 @@
 import SwiftUI
 
+class KodiAppDelegate: NSObject, NSApplicationDelegate {
+    var appState: AppState?
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        appState?.isTerminating = true
+        return .terminateNow
+    }
+}
+
 @main
 struct kodiApp: App {
+    @NSApplicationDelegateAdaptor(KodiAppDelegate.self) private var appDelegate
     @State private var appState = AppState()
     @FocusedValue(\.repositoryViewModel) private var focusedVM
 
@@ -13,6 +23,9 @@ struct kodiApp: App {
         WindowGroup(for: UUID.self) { $repoID in
             RepoWindowContent(repoID: $repoID, appState: appState)
                 .environment(appState)
+                .onAppear {
+                    appDelegate.appState = appState
+                }
         }
         .windowStyle(.automatic)
         .windowToolbarStyle(.unified)
@@ -195,6 +208,11 @@ private struct RepoWindowContent: View {
             }
         }
         .preferredColorScheme(colorScheme)
+        .onDisappear {
+            if let id = repoID, !appState.isTerminating {
+                appState.removeRepository(id: id)
+            }
+        }
         .task {
             appState.openRepositoryTab = { [openWindow] id in
                 // Open new window, then merge it as a tab
