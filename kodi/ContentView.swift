@@ -49,6 +49,7 @@ private struct DetailContentView: View {
                 splitLayout
             } else {
                 mainContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .toolbar {

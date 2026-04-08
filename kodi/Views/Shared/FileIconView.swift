@@ -4,181 +4,276 @@ struct FileIconView: View {
     let fileName: String
 
     var body: some View {
-        Image(systemName: sfSymbol)
-            .foregroundStyle(iconColor)
-            .imageScale(.medium)
-            .frame(width: 16)
+        if let asset = languageAsset {
+            ZStack(alignment: .bottomTrailing) {
+                Image(systemName: "doc.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.quaternary)
+
+                Image(asset)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 10, height: 10)
+                    .offset(x: 2, y: 2)
+            }
+            .frame(width: 18, height: 18)
+        } else {
+            Image(systemName: sfSymbol)
+                .foregroundStyle(iconColor)
+                .imageScale(.medium)
+                .frame(width: 18)
+        }
     }
 
     private var fileExtension: String {
         URL(fileURLWithPath: fileName).pathExtension.lowercased()
     }
 
-    private var sfSymbol: String {
-        // Check special filenames first (no extension)
-        let name = URL(fileURLWithPath: fileName).lastPathComponent.lowercased()
-        if let special = Self.specialFileSymbols[name] { return special }
+    private var lowercaseName: String {
+        URL(fileURLWithPath: fileName).lastPathComponent.lowercased()
+    }
+
+    // MARK: - Language Asset Mapping
+
+    private var languageAsset: String? {
+        // Special filenames
+        if let asset = Self.specialFileAssets[lowercaseName] { return asset }
 
         switch fileExtension {
-        case "swift": return "swift"
-        case "js", "jsx", "mjs", "cjs": return "text.page"
-        case "ts", "tsx", "mts", "cts": return "text.page"
-        case "json", "jsonc", "json5": return "curlybraces"
-        case "md", "txt", "rtf", "doc", "docx": return "doc.plaintext"
-        case "html", "htm", "xhtml": return "globe"
-        case "css", "scss", "less", "sass", "styl": return "paintbrush"
-        case "py", "pyw", "pyi": return "text.page.badge.magnifyingglass"
-        case "rb", "erb", "gemspec": return "diamond"
-        case "go": return "text.page"
-        case "rs": return "gearshape"
-        case "java", "kt", "kts", "groovy", "gradle": return "cup.and.saucer"
-        case "c", "cpp", "h", "hpp", "cc", "cxx", "hxx", "m", "mm": return "chevron.left.forwardslash.chevron.right"
-        case "sh", "zsh", "bash", "fish", "ps1", "psm1", "bat", "cmd": return "terminal"
-        case "yml", "yaml", "toml", "ini", "cfg", "conf": return "list.bullet.rectangle"
-        case "png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "bmp", "tiff", "heic": return "photo"
-        case "pdf": return "doc.richtext"
-        case "zip", "tar", "gz", "bz2", "xz", "7z", "rar", "dmg", "iso": return "doc.zipper"
-        case "lock": return "lock"
-        case "env": return "key"
-        case "xml", "plist", "xsd", "xsl", "xslt": return "text.page.badge.magnifyingglass"
+        // Swift / Apple
+        case "swift": return "FileIcons/swift"
+        case "m": return "FileIcons/objectivec"
+        case "mm": return "FileIcons/objectivecpp"
+        case "applescript": return "FileIcons/applescript"
+
+        // Web fundamentals
+        case "html", "htm", "xhtml": return "FileIcons/html"
+        case "css": return "FileIcons/css"
+        case "scss", "sass": return "FileIcons/sass"
+        case "less": return "FileIcons/less"
+        case "styl": return "FileIcons/stylus"
+
+        // JavaScript ecosystem
+        case "js", "mjs", "cjs": return "FileIcons/javascript"
+        case "jsx": return "FileIcons/react"
+        case "ts", "mts", "cts": return "FileIcons/typescript"
+        case "tsx": return "FileIcons/react"
+        case "vue": return "FileIcons/vue"
+        case "svelte": return "FileIcons/svelte"
+        case "coffee": return "FileIcons/coffeescript"
+        case "ejs": return "FileIcons/ejs"
+
+        // Data / Config
+        case "json", "jsonc", "json5": return "FileIcons/json"
+        case "yml", "yaml": return "FileIcons/yaml"
+        case "toml": return "FileIcons/toml"
+        case "xml", "xsd", "xsl", "xslt": return "FileIcons/markup"
+        case "plist": return "FileIcons/settings"
+        case "nunjucks", "njk": return "FileIcons/nunjucks"
+        case "csv": return "FileIcons/excel"
+        case "graphql", "gql": return "FileIcons/graphql"
+        case "proto": return "FileIcons/proto"
+        case "env": return "FileIcons/dotenv"
+
+        // Python
+        case "py", "pyw", "pyi": return "FileIcons/python"
+        case "pyx": return "FileIcons/cython"
+        case "ipynb": return "FileIcons/jupyter"
+
+        // Ruby
+        case "rb", "erb", "gemspec": return "FileIcons/ruby"
+
         // PHP
-        case "php", "phtml", "php3", "php4", "php5": return "server.rack"
-        // .NET / C#
-        case "cs": return "number"
-        case "vb", "vbs": return "v.square"
-        case "fs", "fsx", "fsi": return "f.square"
-        case "cshtml", "razor", "aspx", "ascx", "master": return "globe.badge.chevron.backward"
-        case "xaml": return "rectangle.on.rectangle"
-        case "sln", "csproj", "vbproj", "fsproj": return "shippingbox"
-        // Dart / Flutter
-        case "dart": return "diamond.fill"
-        // Lua
-        case "lua": return "moon"
-        // R
-        case "r", "rmd": return "chart.bar"
-        // Perl
-        case "pl", "pm": return "p.square"
-        // Scala
-        case "scala", "sc": return "s.square"
-        // Elixir / Erlang
-        case "ex", "exs", "erl", "hrl": return "drop"
-        // Haskell
-        case "hs", "lhs": return "function"
-        // Clojure
-        case "clj", "cljs", "cljc", "edn": return "parentheses"
-        // SQL
-        case "sql", "sqlite", "db": return "cylinder"
-        // GraphQL / Protobuf
-        case "graphql", "gql": return "point.3.connected.trianglepath.dotted"
-        case "proto": return "rectangle.3.group"
-        // Docker
-        case "dockerfile": return "shippingbox"
-        // Terraform / HCL
-        case "tf", "hcl", "tfvars": return "cloud"
-        // Nix
-        case "nix": return "snowflake"
-        // Zig
-        case "zig": return "bolt"
-        // Video / Audio
-        case "mp4", "mov", "avi", "mkv", "webm": return "film"
-        case "mp3", "wav", "aac", "flac", "ogg", "m4a": return "waveform"
+        case "php", "phtml", "php3", "php4", "php5": return "FileIcons/php"
+        case "blade.php": return "FileIcons/blade"
+        case "twig": return "FileIcons/twig"
+
+        // JVM
+        case "java": return "FileIcons/java"
+        case "kt", "kts": return "FileIcons/kotlin"
+        case "scala", "sc": return "FileIcons/scala"
+        case "groovy": return "FileIcons/groovy"
+        case "gradle": return "FileIcons/gradle"
+        case "clj", "cljs", "cljc", "edn": return "FileIcons/clojure"
+
+        // .NET
+        case "cs": return "FileIcons/csharp"
+        case "vb", "vbs": return "FileIcons/visualbasic"
+        case "fs", "fsx", "fsi": return "FileIcons/fsharp"
+        case "sln": return "FileIcons/visualstudio"
+        case "csproj", "vbproj", "fsproj": return "FileIcons/dotnet"
+        case "xaml": return "FileIcons/xaml"
+        case "razor", "cshtml", "aspx": return "FileIcons/razor"
+
+        // Systems
+        case "c", "h": return "FileIcons/c"
+        case "cpp", "cc", "cxx", "hpp", "hxx": return "FileIcons/cpp"
+        case "rs": return "FileIcons/rust"
+        case "go": return "FileIcons/go"
+        case "zig": return "FileIcons/zig"
+        case "nim": return "FileIcons/nim"
+
+        // Functional
+        case "hs", "lhs": return "FileIcons/haskell"
+        case "ex", "exs": return "FileIcons/elixir"
+        case "erl", "hrl": return "FileIcons/erlang"
+        case "elm": return "FileIcons/elm"
+        case "ml", "mli": return "FileIcons/ocaml"
+        case "re", "rei": return "FileIcons/reason"
+        case "res", "resi": return "FileIcons/rescript"
+        case "ps": return "FileIcons/purescript"
+
+        // Scripting
+        case "lua": return "FileIcons/lua"
+        case "pl", "pm": return "FileIcons/perl"
+        case "r", "rmd": return "FileIcons/rlang"
+        case "jl": return "FileIcons/julia"
+        case "dart": return "FileIcons/dart"
+        case "cr": return "FileIcons/crystal"
+
+        // Shell
+        case "sh", "bash", "zsh": return "FileIcons/shell"
+        case "fish": return "FileIcons/fish"
+        case "ps1", "psm1": return "FileIcons/powershell"
+
+        // Markup / Docs
+        case "md", "mdx": return "FileIcons/markdown"
+        case "tex", "latex": return "FileIcons/tex"
+        case "rst": return "FileIcons/rst"
+
+        // DevOps / Infra
+        case "tf", "hcl", "tfvars": return "FileIcons/terraform"
+        case "nix": return "FileIcons/nix"
+
+        // Database
+        case "sql", "sqlite", "db": return "FileIcons/database"
+        case "prisma": return "FileIcons/prisma"
+
+        // Images
+        case "png", "jpg", "jpeg", "gif", "bmp", "tiff", "heic", "webp": return "FileIcons/image"
+        case "svg": return "FileIcons/svg"
+        case "ico": return "FileIcons/favicon"
+        case "pdf": return "FileIcons/pdf"
+
+        // Media
+        case "mp4", "mov", "avi", "mkv", "webm": return "FileIcons/video"
+        case "mp3", "wav", "aac", "flac", "ogg", "m4a": return "FileIcons/audio"
+
         // Fonts
-        case "ttf", "otf", "woff", "woff2": return "textformat"
-        // Certificates / security
+        case "ttf", "otf", "woff", "woff2": return "FileIcons/font"
+
+        // Archives
+        case "zip", "tar", "gz", "bz2", "xz", "7z", "rar": return "FileIcons/zip"
+
+        // Config files
+        case "lock": return "FileIcons/key"
+        case "log": return "FileIcons/log"
+        case "sol": return "FileIcons/solidity"
+        case "wasm": return "FileIcons/wasm"
+
+        default: return nil
+        }
+    }
+
+    private static let specialFileAssets: [String: String] = [
+        // Docker
+        "dockerfile": "FileIcons/docker",
+        "docker-compose.yml": "FileIcons/docker",
+        "docker-compose.yaml": "FileIcons/docker",
+        "compose.yml": "FileIcons/docker",
+        "compose.yaml": "FileIcons/docker",
+        ".dockerignore": "FileIcons/docker",
+        // Ruby
+        "gemfile": "FileIcons/ruby",
+        "rakefile": "FileIcons/ruby",
+        // Node / JS
+        "package.json": "FileIcons/npm",
+        "package-lock.json": "FileIcons/npm",
+        "tsconfig.json": "FileIcons/typescript",
+        ".babelrc": "FileIcons/babel",
+        "babel.config.js": "FileIcons/babel",
+        ".eslintrc": "FileIcons/eslint",
+        ".eslintrc.js": "FileIcons/eslint",
+        ".eslintrc.json": "FileIcons/eslint",
+        "eslint.config.js": "FileIcons/eslint",
+        "eslint.config.mjs": "FileIcons/eslint",
+        ".prettierrc": "FileIcons/prettier",
+        "prettier.config.js": "FileIcons/prettier",
+        "webpack.config.js": "FileIcons/webpack",
+        "vite.config.ts": "FileIcons/vitejs",
+        "vite.config.js": "FileIcons/vitejs",
+        "vitest.config.ts": "FileIcons/vitest",
+        "next.config.js": "FileIcons/nextjs",
+        "next.config.mjs": "FileIcons/nextjs",
+        "tailwind.config.js": "FileIcons/tailwind",
+        "tailwind.config.ts": "FileIcons/tailwind",
+        "postcss.config.js": "FileIcons/postcss",
+        "jest.config.js": "FileIcons/jest",
+        "jest.config.ts": "FileIcons/jest",
+        ".mocharc.yml": "FileIcons/mocha",
+        "rollup.config.js": "FileIcons/rollup",
+        "svelte.config.js": "FileIcons/svelte",
+        "yarn.lock": "FileIcons/yarn",
+        "pnpm-lock.yaml": "FileIcons/pnpm",
+        ".npmrc": "FileIcons/npm",
+        ".yarnrc": "FileIcons/yarn",
+        ".nvmrc": "FileIcons/node",
+        ".node-version": "FileIcons/node",
+        // Build
+        "makefile": "FileIcons/cmake",
+        "cmakelists.txt": "FileIcons/cmake",
+        "gulpfile.js": "FileIcons/gulp",
+        "gruntfile.js": "FileIcons/grunt",
+        // Git
+        ".gitignore": "FileIcons/git",
+        ".gitattributes": "FileIcons/git",
+        ".gitmodules": "FileIcons/git",
+        ".gitkeep": "FileIcons/git",
+        // CI
+        "jenkinsfile": "FileIcons/jenkins",
+        ".gitlab-ci.yml": "FileIcons/gitlab",
+        // Editor
+        ".editorconfig": "FileIcons/editorconfig",
+        // Firebase
+        "firebase.json": "FileIcons/firebase",
+        ".firebaserc": "FileIcons/firebase",
+        // Storybook
+        ".storybook": "FileIcons/storybook",
+        // Misc
+        "license": "FileIcons/certificate",
+        "licence": "FileIcons/certificate",
+        "readme.md": "FileIcons/markdown",
+        "contributing.md": "FileIcons/contributing",
+        ".env": "FileIcons/dotenv",
+        ".env.local": "FileIcons/dotenv",
+        ".env.development": "FileIcons/dotenv",
+        ".env.production": "FileIcons/dotenv",
+        "vercel.json": "FileIcons/vercel",
+        ".sentryclirc": "FileIcons/sentry",
+    ]
+
+    // MARK: - SF Symbol Fallbacks (for types without custom icons)
+
+    private var sfSymbol: String {
+        switch fileExtension {
+        case "txt", "rtf", "doc", "docx": return "doc.plaintext"
+        case "bat", "cmd": return "terminal"
+        case "ini", "cfg", "conf": return "list.bullet.rectangle"
+        case "dmg", "iso": return "externaldrive"
         case "pem", "crt", "cer", "key", "p12", "pfx": return "lock.shield"
-        // Log files
-        case "log": return "text.line.last.and.arrowtriangle.forward"
-        // Diff / Patch
         case "diff", "patch": return "plus.forwardslash.minus"
         default: return "doc"
         }
     }
 
-    private static let specialFileSymbols: [String: String] = [
-        "dockerfile": "shippingbox",
-        "makefile": "hammer",
-        "cmakelists.txt": "hammer",
-        "gemfile": "diamond",
-        "rakefile": "diamond",
-        "podfile": "shippingbox",
-        "cartfile": "shippingbox",
-        "vagrantfile": "server.rack",
-        "procfile": "terminal",
-        "license": "doc.text",
-        "licence": "doc.text",
-        "readme.md": "book",
-        "changelog.md": "clock",
-        "contributing.md": "person.2",
-        ".gitignore": "eye.slash",
-        ".gitattributes": "gear",
-        ".editorconfig": "gear",
-        ".prettierrc": "paintbrush",
-        ".eslintrc": "checkmark.circle",
-        ".swiftlint.yml": "checkmark.circle",
-        "package.json": "shippingbox",
-        "tsconfig.json": "gearshape",
-        "compose.yml": "shippingbox",
-        "compose.yaml": "shippingbox",
-        "docker-compose.yml": "shippingbox",
-        "docker-compose.yaml": "shippingbox",
-    ]
-
     private var iconColor: Color {
-        let name = URL(fileURLWithPath: fileName).lastPathComponent.lowercased()
-        if Self.specialFileColors[name] != nil { return Self.specialFileColors[name]! }
-
         switch fileExtension {
-        case "swift": return .orange
-        case "js", "jsx", "mjs", "cjs": return .yellow
-        case "ts", "tsx", "mts", "cts": return .blue
-        case "json", "jsonc", "json5": return .gray
-        case "html", "htm", "xhtml": return .orange
-        case "css", "scss", "less", "sass", "styl": return .blue
-        case "py", "pyw", "pyi": return .green
-        case "rb", "erb", "gemspec": return .red
-        case "go": return .cyan
-        case "rs": return .orange
-        case "md", "txt": return .secondary
-        case "php", "phtml": return .purple
-        case "cs", "cshtml", "razor", "aspx": return .purple
-        case "vb", "vbs": return .blue
-        case "fs", "fsx", "fsi": return .cyan
-        case "dart": return .cyan
-        case "lua": return .blue
-        case "r", "rmd": return .blue
-        case "pl", "pm": return .indigo
-        case "scala", "sc": return .red
-        case "ex", "exs": return .purple
-        case "erl", "hrl": return .red
-        case "hs", "lhs": return .purple
-        case "clj", "cljs", "cljc": return .green
-        case "java", "kt", "kts", "groovy", "gradle": return .orange
-        case "sql", "sqlite": return .yellow
-        case "graphql", "gql": return .pink
-        case "proto": return .green
-        case "tf", "hcl", "tfvars": return .purple
-        case "nix": return .cyan
-        case "zig": return .orange
-        case "sln", "csproj", "vbproj", "fsproj": return .purple
-        case "xaml": return .blue
-        case "yml", "yaml", "toml", "ini", "cfg", "conf": return .gray
-        case "sh", "zsh", "bash", "fish": return .green
-        case "ps1", "psm1", "bat", "cmd": return .blue
-        case "c", "cpp", "cc", "cxx": return .blue
-        case "h", "hpp", "hxx": return .purple
-        case "m", "mm": return .orange
-        case "log": return .gray
+        case "txt", "rtf": return .secondary
+        case "bat", "cmd": return .blue
+        case "ini", "cfg", "conf": return .gray
         case "diff", "patch": return .green
         default: return .secondary
         }
     }
-
-    private static let specialFileColors: [String: Color] = [
-        "dockerfile": .blue,
-        "makefile": .orange,
-        "gemfile": .red,
-        "package.json": .green,
-        ".gitignore": .orange,
-        ".editorconfig": .gray,
-    ]
 }

@@ -16,7 +16,7 @@ struct DiffContentView: View {
                         systemImage: "doc.text.magnifyingglass",
                         description: Text("Choose a changed file from the sidebar to view its diff")
                     )
-                } else if !viewModel.isTerminalPanelVisible {
+                } else {
                     VStack {
                         Spacer()
                         QuickLaunchGrid { item in
