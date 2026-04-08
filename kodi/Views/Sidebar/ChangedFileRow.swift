@@ -25,8 +25,7 @@ struct ChangedFileRow: View {
             Text(file.fileName)
                 .lineLimit(1)
                 .truncationMode(.middle)
-
-            Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(file.status.rawValue)
                 .font(.caption.weight(.semibold))

@@ -36,6 +36,7 @@ private struct FolderNodeView: View {
                     Text(node.name)
                         .lineLimit(1)
                         .truncationMode(.middle)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .help(node.name)
                 } icon: {
                     Image(systemName: isExpanded ? "folder.fill" : "folder")
