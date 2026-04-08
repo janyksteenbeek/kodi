@@ -530,6 +530,86 @@ final class RepositoryViewModel: Identifiable {
         session.save()
     }
 
+    // MARK: - File Operations
+
+    func createFile(named name: String, inDirectory directory: String?) {
+        let base = repository.path
+        let dirURL: URL
+        if let directory {
+            dirURL = base.appendingPathComponent(directory)
+        } else {
+            dirURL = base
+        }
+        let fileURL = dirURL.appendingPathComponent(name)
+
+        // Don't overwrite existing files
+        guard !FileManager.default.fileExists(atPath: fileURL.path) else { return }
+
+        FileManager.default.createFile(atPath: fileURL.path, contents: Data(), attributes: nil)
+        Task { await loadDirectoryTree() }
+    }
+
+    func createDirectory(named name: String, inDirectory directory: String?) {
+        let base = repository.path
+        let dirURL: URL
+        if let directory {
+            dirURL = base.appendingPathComponent(directory)
+        } else {
+            dirURL = base
+        }
+        let folderURL = dirURL.appendingPathComponent(name)
+
+        guard !FileManager.default.fileExists(atPath: folderURL.path) else { return }
+
+        try? FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+        Task { await loadDirectoryTree() }
+    }
+
+    func deleteFileOrFolder(at relativePath: String) {
+        let fullURL = repository.path.appendingPathComponent(relativePath)
+        try? FileManager.default.removeItem(at: fullURL)
+        // Close editor if open
+        editorSessions.removeAll { $0.relativePath == relativePath }
+        Task { await loadDirectoryTree() }
+    }
+
+    func revealInFinder(_ relativePath: String) {
+        let fullURL = repository.path.appendingPathComponent(relativePath)
+        NSWorkspace.shared.activateFileViewerSelecting([fullURL])
+    }
+
+    func renameFileOrFolder(at relativePath: String, to newName: String) {
+        let fullURL = repository.path.appendingPathComponent(relativePath)
+        let parentURL = fullURL.deletingLastPathComponent()
+        let destURL = parentURL.appendingPathComponent(newName)
+
+        guard !FileManager.default.fileExists(atPath: destURL.path) else { return }
+
+        try? FileManager.default.moveItem(at: fullURL, to: destURL)
+        // Close editor if the renamed file was open (path changed)
+        editorSessions.removeAll { $0.relativePath == relativePath }
+        Task { await loadDirectoryTree() }
+    }
+
+    func duplicateFile(at relativePath: String) {
+        let fullURL = repository.path.appendingPathComponent(relativePath)
+        let ext = fullURL.pathExtension
+        let nameWithoutExt = fullURL.deletingPathExtension().lastPathComponent
+        let parentURL = fullURL.deletingLastPathComponent()
+
+        var copyName: String
+        var copyURL: URL
+        var counter = 1
+        repeat {
+            copyName = ext.isEmpty ? "\(nameWithoutExt) copy\(counter > 1 ? " \(counter)" : "")" : "\(nameWithoutExt) copy\(counter > 1 ? " \(counter)" : "").\(ext)"
+            copyURL = parentURL.appendingPathComponent(copyName)
+            counter += 1
+        } while FileManager.default.fileExists(atPath: copyURL.path)
+
+        try? FileManager.default.copyItem(at: fullURL, to: copyURL)
+        Task { await loadDirectoryTree() }
+    }
+
     private func loadDiff(for path: String) async {
         guard let file = changedFiles.first(where: { $0.path == path }) else { return }
         do {
