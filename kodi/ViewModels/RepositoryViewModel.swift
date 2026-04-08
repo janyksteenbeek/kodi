@@ -471,6 +471,18 @@ final class RepositoryViewModel: Identifiable {
         isFetching = false
     }
 
+    func mergeBranch(_ branch: String) async {
+        isSwitchingBranch = true
+        error = nil
+        do {
+            try await gitService.merge(branch: branch, at: repository.path)
+            await refresh()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isSwitchingBranch = false
+    }
+
     // MARK: - Directory Tree & Editor
 
     func loadDirectoryTree() async {

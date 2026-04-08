@@ -203,6 +203,10 @@ final class GitService: Sendable {
         _ = try await runGit(["fetch", "--all", "--prune"], at: repositoryPath)
     }
 
+    nonisolated func merge(branch: String, at repositoryPath: URL) async throws {
+        _ = try await runGit(["merge", branch], at: repositoryPath)
+    }
+
     // MARK: - Private
 
     nonisolated private func runGit(_ arguments: [String], at directory: URL) async throws -> String {
