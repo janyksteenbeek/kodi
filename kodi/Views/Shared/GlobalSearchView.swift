@@ -122,9 +122,7 @@ private struct SearchResultRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: iconForExtension(result.fileExtension))
-                .foregroundStyle(.secondary)
-                .frame(width: 16)
+            FileIconView(fileName: result.fileName)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(result.fileName)
@@ -142,25 +140,6 @@ private struct SearchResultRow: View {
             Spacer()
         }
         .padding(.vertical, 2)
-    }
-
-    private func iconForExtension(_ ext: String) -> String {
-        switch ext.lowercased() {
-        case "swift": "swift"
-        case "js", "ts", "jsx", "tsx": "doc.text"
-        case "json": "curlybraces"
-        case "md", "txt": "doc.plaintext"
-        case "yml", "yaml": "list.bullet.indent"
-        case "png", "jpg", "jpeg", "gif", "svg", "webp": "photo"
-        case "css", "scss": "paintbrush"
-        case "html": "globe"
-        case "py": "doc.text"
-        case "rb": "doc.text"
-        case "rs": "doc.text"
-        case "go": "doc.text"
-        case "sh", "zsh", "bash": "terminal"
-        default: "doc"
-        }
     }
 }
 
