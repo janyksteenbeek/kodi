@@ -15,6 +15,8 @@ final class CommitMessageGenerator: Sendable {
         - Use lowercase, no period at end
         - Keep the first line under 72 characters
         - Be specific about what changed, focus on the "why" not the "what"
+        - Always output exactly ONE single-line commit message, even when multiple features or changes are staged
+        - Summarize all changes into one cohesive message — never use bullet points, multiple lines, or multiple messages
         - Only output the commit message, nothing else — no quotes, no backticks, no explanation
         """
 
@@ -49,6 +51,11 @@ final class CommitMessageGenerator: Sendable {
         // Strip wrapping backticks
         if message.hasPrefix("`") && message.hasSuffix("`") {
             message = String(message.dropFirst().dropLast())
+        }
+
+        // Ensure single line — take only the first line if the model returned multiple
+        if let firstLine = message.components(separatedBy: .newlines).first(where: { !$0.isEmpty }) {
+            message = firstLine
         }
 
         return message

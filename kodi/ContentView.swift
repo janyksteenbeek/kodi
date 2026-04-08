@@ -14,6 +14,25 @@ struct ContentView: View {
                 }
         }
         .frame(minWidth: 800, minHeight: 500)
+        .overlay {
+            if viewModel.isGlobalSearchVisible {
+                ZStack {
+                    Color.black.opacity(0.15)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            viewModel.isGlobalSearchVisible = false
+                        }
+
+                    VStack {
+                        GlobalSearchView(viewModel: viewModel)
+                            .padding(.top, 80)
+                        Spacer()
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: viewModel.isGlobalSearchVisible)
     }
 }
 
@@ -33,6 +52,10 @@ private struct DetailContentView: View {
             }
         }
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                BranchPickerView(viewModel: viewModel)
+            }
+
             ToolbarItemGroup(placement: .automatic) {
                 Picker("Diff Mode", selection: $viewModel.diffMode) {
                     ForEach(RepositoryViewModel.DiffMode.allCases, id: \.self) { mode in

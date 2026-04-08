@@ -18,6 +18,13 @@ final class RepositoryViewModel: Identifiable {
     var commitsAhead: Int = 0
     var commitsBehind: Int = 0
 
+    // Branch state
+    var currentBranch: String = ""
+    var localBranches: [String] = []
+    var remoteBranches: [String] = []
+    var isFetching: Bool = false
+    var isSwitchingBranch: Bool = false
+
     var terminalSessions: [TerminalSession] = []
     private var terminalCounter: Int = 0
     var isTerminalPanelVisible: Bool = false
@@ -33,6 +40,7 @@ final class RepositoryViewModel: Identifiable {
     var pendingCloseSession: EditorSession?
     var showUnsavedAlert: Bool = false
     var inspectorSelection: Set<String> = []
+    var isGlobalSearchVisible: Bool = false
 
     var isEditorVisible: Bool { !editorSessions.isEmpty }
 
@@ -115,6 +123,7 @@ final class RepositoryViewModel: Identifiable {
             self.error = error.localizedDescription
         }
         isLoading = false
+        await refreshBranches()
         await refreshRemoteStatus()
         await loadDirectoryTree()
     }
@@ -409,6 +418,57 @@ final class RepositoryViewModel: Identifiable {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    // MARK: - Branches
+
+    func refreshBranches() async {
+        do {
+            currentBranch = try await gitService.currentBranch(at: repository.path)
+            localBranches = try await gitService.localBranches(at: repository.path)
+            remoteBranches = try await gitService.remoteBranches(at: repository.path)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func checkoutBranch(_ branch: String) async {
+        isSwitchingBranch = true
+        error = nil
+        do {
+            try await gitService.checkout(branch: branch, at: repository.path)
+            await refreshBranches()
+            await refresh()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isSwitchingBranch = false
+    }
+
+    func createAndCheckoutBranch(_ name: String) async {
+        isSwitchingBranch = true
+        error = nil
+        do {
+            try await gitService.createBranch(name: name, at: repository.path)
+            await refreshBranches()
+            await refresh()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isSwitchingBranch = false
+    }
+
+    func fetchRemote() async {
+        isFetching = true
+        error = nil
+        do {
+            try await gitService.fetch(at: repository.path)
+            await refreshBranches()
+            await refreshRemoteStatus()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isFetching = false
     }
 
     // MARK: - Directory Tree & Editor

@@ -170,6 +170,39 @@ final class GitService: Sendable {
         return Array(Set(combined)).sorted()
     }
 
+    // MARK: - Branches
+
+    nonisolated func currentBranch(at repositoryPath: URL) async throws -> String {
+        let output = try await runGit(["rev-parse", "--abbrev-ref", "HEAD"], at: repositoryPath)
+        return output.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    nonisolated func localBranches(at repositoryPath: URL) async throws -> [String] {
+        let output = try await runGit(["branch", "--format=%(refname:short)"], at: repositoryPath)
+        return output.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    nonisolated func remoteBranches(at repositoryPath: URL) async throws -> [String] {
+        let output = try await runGit(["branch", "-r", "--format=%(refname:short)"], at: repositoryPath)
+        return output.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && !$0.hasSuffix("/HEAD") }
+    }
+
+    nonisolated func checkout(branch: String, at repositoryPath: URL) async throws {
+        _ = try await runGit(["checkout", branch], at: repositoryPath)
+    }
+
+    nonisolated func createBranch(name: String, at repositoryPath: URL) async throws {
+        _ = try await runGit(["checkout", "-b", name], at: repositoryPath)
+    }
+
+    nonisolated func fetch(at repositoryPath: URL) async throws {
+        _ = try await runGit(["fetch", "--all", "--prune"], at: repositoryPath)
+    }
+
     // MARK: - Private
 
     nonisolated private func runGit(_ arguments: [String], at directory: URL) async throws -> String {

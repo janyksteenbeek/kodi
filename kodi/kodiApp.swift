@@ -71,6 +71,11 @@ struct kodiApp: App {
                         vm.isInspectorVisible.toggle()
                     }
                     .keyboardShortcut("e", modifiers: [.command, .shift])
+
+                    Button("Go to File…") {
+                        vm.isGlobalSearchVisible.toggle()
+                    }
+                    .keyboardShortcut("f", modifiers: [.command, .shift])
                 }
             }
 
