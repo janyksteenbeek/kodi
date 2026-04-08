@@ -6,6 +6,7 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView {
             SidebarView(viewModel: viewModel)
+                .navigationSplitViewColumnWidth(min: 220, ideal: 260)
         } detail: {
             DetailContentView(viewModel: viewModel)
                 .inspector(isPresented: $viewModel.isInspectorVisible) {
