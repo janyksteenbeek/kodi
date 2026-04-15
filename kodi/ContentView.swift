@@ -41,6 +41,7 @@ private struct DetailContentView: View {
     @Bindable var viewModel: RepositoryViewModel
     @AppStorage("primaryPanel") private var primaryPanel = "terminal"
     @State private var panelRatio: CGFloat = 0.5
+    @State private var splitContainerLength: CGFloat = 0
 
     private var terminalIsPrimary: Bool { primaryPanel == "terminal" }
 
@@ -128,39 +129,29 @@ private struct DetailContentView: View {
     private var splitLayout: some View {
         let isRight = viewModel.terminalPanelMode == .right
 
-        return GeometryReader { geo in
-            let layout = isRight
-                ? AnyLayout(HStackLayout(spacing: 0))
-                : AnyLayout(VStackLayout(spacing: 0))
-
-            let total = isRight ? geo.size.width : geo.size.height
-            let secondarySize = total * panelRatio
-
-            layout {
-                if terminalIsPrimary {
-                    TerminalPanelView(viewModel: viewModel)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    mainContent
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-
-                SplitDivider(isHorizontal: isRight, panelRatio: $panelRatio, containerSize: total)
-
-                if terminalIsPrimary {
-                    mainContent
-                        .frame(
-                            width: isRight ? secondarySize : nil,
-                            height: isRight ? nil : secondarySize
-                        )
-                } else {
-                    TerminalPanelView(viewModel: viewModel)
-                        .frame(
-                            width: isRight ? secondarySize : nil,
-                            height: isRight ? nil : secondarySize
-                        )
-                }
+        return SplitPanelLayout(isHorizontal: isRight, secondaryRatio: panelRatio) {
+            if terminalIsPrimary {
+                TerminalPanelView(viewModel: viewModel)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                mainContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+
+            SplitDivider(isHorizontal: isRight, panelRatio: $panelRatio, containerSize: splitContainerLength)
+
+            if terminalIsPrimary {
+                mainContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                TerminalPanelView(viewModel: viewModel)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            isRight ? proxy.size.width : proxy.size.height
+        } action: { newValue in
+            splitContainerLength = newValue
         }
     }
 }
@@ -169,6 +160,8 @@ private struct SplitDivider: View {
     let isHorizontal: Bool
     @Binding var panelRatio: CGFloat
     let containerSize: CGFloat
+
+    @GestureState private var dragStartRatio: CGFloat? = nil
 
     var body: some View {
         Rectangle()
@@ -192,11 +185,44 @@ private struct SplitDivider: View {
             }
             .gesture(
                 DragGesture(minimumDistance: 1)
+                    .updating($dragStartRatio) { _, state, _ in
+                        if state == nil { state = panelRatio }
+                    }
                     .onChanged { value in
+                        guard containerSize > 0 else { return }
+                        let startRatio = dragStartRatio ?? panelRatio
                         let delta = isHorizontal ? -value.translation.width : -value.translation.height
-                        let ratioDelta = delta / containerSize
-                        panelRatio = min(max(panelRatio + ratioDelta, 0.15), 0.85)
+                        panelRatio = min(max(startRatio + delta / containerSize, 0.15), 0.85)
                     }
             )
+    }
+}
+
+private struct SplitPanelLayout: Layout {
+    let isHorizontal: Bool
+    let secondaryRatio: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Void) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Void) {
+        guard subviews.count == 3 else { return }
+
+        let dividerThickness: CGFloat = 9
+        let total = isHorizontal ? bounds.width : bounds.height
+        let available = max(total - dividerThickness, 0)
+        let secondarySize = available * secondaryRatio
+        let primarySize = available - secondarySize
+
+        if isHorizontal {
+            subviews[0].place(at: bounds.origin, proposal: .init(width: primarySize, height: bounds.height))
+            subviews[1].place(at: .init(x: bounds.minX + primarySize, y: bounds.minY), proposal: .init(width: dividerThickness, height: bounds.height))
+            subviews[2].place(at: .init(x: bounds.minX + primarySize + dividerThickness, y: bounds.minY), proposal: .init(width: secondarySize, height: bounds.height))
+        } else {
+            subviews[0].place(at: bounds.origin, proposal: .init(width: bounds.width, height: primarySize))
+            subviews[1].place(at: .init(x: bounds.minX, y: bounds.minY + primarySize), proposal: .init(width: bounds.width, height: dividerThickness))
+            subviews[2].place(at: .init(x: bounds.minX, y: bounds.minY + primarySize + dividerThickness), proposal: .init(width: bounds.width, height: secondarySize))
+        }
     }
 }

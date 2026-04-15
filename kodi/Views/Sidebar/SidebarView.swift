@@ -60,16 +60,14 @@ struct SidebarView: View {
             Task { await viewModel.selectFiles(viewModel.changedFiles) }
             return .handled
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            CommitView(viewModel: viewModel)
-        }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack(spacing: 6) {
+                Spacer()
                 Button(action: { appState.addRepository() }) {
-                    Label("Add Repository", systemImage: "plus")
+                    Image(systemName: "plus")
                 }
-            }
-            ToolbarItem(placement: .primaryAction) {
+                .buttonStyle(.borderless)
+                .help("Add Repository")
                 Menu {
                     Button(action: {
                         Task { await viewModel.refresh() }
@@ -87,9 +85,18 @@ struct SidebarView: View {
                         )
                     }
                 } label: {
-                    Label("Options", systemImage: "ellipsis.circle")
+                    Image(systemName: "ellipsis.circle")
                 }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Options")
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            CommitView(viewModel: viewModel)
         }
         .frame(minWidth: sidebarWidth)
     }
