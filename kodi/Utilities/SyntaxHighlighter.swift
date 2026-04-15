@@ -9,6 +9,12 @@ struct SyntaxHighlighter {
     static let largeFileCharacterThreshold = 50_000
     static let largeFileLineThreshold = 2_000
 
+    private static let cache: NSCache<NSString, NSAttributedString> = {
+        let c = NSCache<NSString, NSAttributedString>()
+        c.countLimit = 5_000
+        return c
+    }()
+
     // MARK: - Token Types
 
     enum TokenType {
@@ -73,10 +79,17 @@ struct SyntaxHighlighter {
     // MARK: - Public API
 
     static func highlight(_ code: String, fileExtension: String) -> AttributedString {
+        let cacheKey = "\(fileExtension)\u{1f}\(code)" as NSString
+        if let cached = cache.object(forKey: cacheKey) {
+            return AttributedString(cached)
+        }
+
         var result = AttributedString(code)
         result.font = .body.monospaced()
 
         guard !code.isEmpty, let lang = language(for: fileExtension) else {
+            let ns = NSAttributedString(result)
+            cache.setObject(ns, forKey: cacheKey)
             return result
         }
 
@@ -139,6 +152,7 @@ struct SyntaxHighlighter {
         // 12. PascalCase identifiers as types
         applyPattern(#"\b[A-Z][a-zA-Z0-9]+\b"#, to: &result, in: nsCode, range: fullRange, type: .type, protected: &protected)
 
+        cache.setObject(NSAttributedString(result), forKey: cacheKey)
         return result
     }
 

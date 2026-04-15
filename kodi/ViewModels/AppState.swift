@@ -12,14 +12,34 @@ final class AppState {
     var openRepositoryTab: ((UUID) -> Void)?
 
     init() {
-        fileWatcher.onChange = { [weak self] url in
+        fileWatcher.onChange = { [weak self] url, branchChanged in
             guard let self else { return }
             let autoRefresh = UserDefaults.standard.object(forKey: "autoRefresh") as? Bool ?? true
             guard autoRefresh else { return }
-            if let repo = repositories.first(where: { $0.path == url }),
-               let vm = repositoryViewModels[repo.id] {
-                Task { await vm.refresh() }
+            guard let repo = repositories.first(where: { $0.path == url }),
+                  let vm = repositoryViewModels[repo.id] else { return }
+
+            if vm.isActive {
+                Task { await vm.refresh(branchChanged: branchChanged) }
+            } else {
+                // Background tab: mark dirty, refresh when user focuses it.
+                vm.needsRefresh = true
+                if branchChanged {
+                    vm.pendingBranchRefresh = true
+                }
             }
+        }
+    }
+
+    func activate(_ id: UUID) {
+        for (vmId, vm) in repositoryViewModels {
+            vm.isActive = (vmId == id)
+        }
+        guard let vm = repositoryViewModels[id] else { return }
+        if vm.needsRefresh {
+            let branchChanged = vm.pendingBranchRefresh
+            vm.pendingBranchRefresh = false
+            Task { await vm.refresh(branchChanged: branchChanged) }
         }
     }
 

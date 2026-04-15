@@ -27,6 +27,12 @@ final class RepositoryViewModel: Identifiable {
 
     var terminalSessions: [TerminalSession] = []
     private var terminalCounter: Int = 0
+
+    var isActive: Bool = false
+    var needsRefresh: Bool = false
+    var pendingBranchRefresh: Bool = false
+    private var refreshTask: Task<Void, Never>?
+    private var directoryTreeLoaded: Bool = false
     var isTerminalPanelVisible: Bool = false
     var terminalPanelMode: TerminalPanelMode
     var panelTerminalIDs: [UUID] = []
@@ -104,11 +110,25 @@ final class RepositoryViewModel: Identifiable {
         changedFiles.first { $0.path == selectedFilePath }
     }
 
-    func refresh() async {
+    func refresh(branchChanged: Bool = false) async {
+        needsRefresh = false
+        refreshTask?.cancel()
+        let task = Task { [weak self] in
+            guard let self else { return }
+            await self.performRefresh(branchChanged: branchChanged)
+        }
+        refreshTask = task
+        await task.value
+    }
+
+    private func performRefresh(branchChanged: Bool) async {
         isLoading = true
         error = nil
         do {
-            changedFiles = try await gitService.status(at: repository.path)
+            let status = try await gitService.status(at: repository.path)
+            if Task.isCancelled { isLoading = false; return }
+            changedFiles = status
+
             if let path = selectedFilePath {
                 if changedFiles.contains(where: { $0.path == path }) {
                     await loadDiff(for: path)
@@ -116,32 +136,46 @@ final class RepositoryViewModel: Identifiable {
                     selectedFilePath = nil
                     await loadAllDiffs()
                 }
-            } else {
+            } else if !currentDiff.isEmpty {
+                // User was viewing "all changes" — refresh that view.
                 await loadAllDiffs()
             }
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
-        await refreshBranches()
-        await refreshRemoteStatus()
-        await loadDirectoryTree()
+        if Task.isCancelled { return }
+
+        if branchChanged {
+            await refreshBranches()
+            await refreshRemoteStatus()
+        }
+
+        if !directoryTreeLoaded {
+            await loadDirectoryTree()
+        }
     }
 
+    /// Load diffs for every changed file in a single batched git call.
+    /// Previously this fanned out to N subprocesses — one per file — which
+    /// blocked the main loop whenever a repo had many dirty files.
     private func loadAllDiffs() async {
-        var allDiffs: [DiffResult] = []
-        for file in changedFiles {
-            do {
-                let rawDiff: String
-                if file.status == .untracked {
-                    rawDiff = try await gitService.diffUntrackedFile(at: repository.path, file: file.path)
-                } else {
-                    rawDiff = try await gitService.diffForFile(at: repository.path, file: file.path, staged: file.isStaged)
-                }
-                allDiffs.append(contentsOf: DiffParser.parse(rawDiff))
-            } catch { }
+        do {
+            let combined = try await gitService.diffAll(at: repository.path)
+            var results = DiffParser.parse(combined)
+
+            // `git diff` doesn't include untracked files; append them synthesized.
+            let untracked = changedFiles.filter { $0.status == .untracked }
+            for file in untracked {
+                do {
+                    let raw = try await gitService.diffUntrackedFile(at: repository.path, file: file.path)
+                    results.append(contentsOf: DiffParser.parse(raw))
+                } catch { }
+            }
+            currentDiff = results
+        } catch {
+            currentDiff = []
         }
-        currentDiff = allDiffs
     }
 
     func push() async {
@@ -331,22 +365,24 @@ final class RepositoryViewModel: Identifiable {
 
     func selectFiles(_ files: [ChangedFile]) async {
         isLoading = true
-        var allDiffs: [DiffResult] = []
-        for file in files {
-            do {
-                let rawDiff: String
-                if file.status == .untracked {
-                    rawDiff = try await gitService.diffUntrackedFile(at: repository.path, file: file.path)
-                } else {
-                    rawDiff = try await gitService.diffForFile(at: repository.path, file: file.path, staged: file.isStaged)
-                }
-                allDiffs.append(contentsOf: DiffParser.parse(rawDiff))
-            } catch {
-                // Skip files that fail to diff
+        defer { isLoading = false }
+
+        let selectedPaths = Set(files.map(\.path))
+
+        do {
+            let combined = try await gitService.diffAll(at: repository.path)
+            var results = DiffParser.parse(combined).filter { selectedPaths.contains($0.filePath) }
+
+            for file in files where file.status == .untracked {
+                do {
+                    let raw = try await gitService.diffUntrackedFile(at: repository.path, file: file.path)
+                    results.append(contentsOf: DiffParser.parse(raw))
+                } catch { }
             }
+            currentDiff = results
+        } catch {
+            currentDiff = []
         }
-        currentDiff = allDiffs
-        isLoading = false
     }
 
     func toggleStaging(for file: ChangedFile) {
@@ -488,6 +524,7 @@ final class RepositoryViewModel: Identifiable {
     func loadDirectoryTree() async {
         do {
             directoryFiles = try await gitService.listAllFiles(at: repository.path)
+            directoryTreeLoaded = true
         } catch {
             // Silently fail — directory tree is non-critical
         }

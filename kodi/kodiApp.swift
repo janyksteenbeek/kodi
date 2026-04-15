@@ -188,6 +188,7 @@ private struct RepoWindowContent: View {
     @Environment(\.openWindow) private var openWindow
     @AppStorage("appColorScheme") private var appColorScheme = "system"
     @AppStorage("terminalOpenOnLaunch") private var terminalOpenOnLaunch = false
+    @State private var hostingWindow: NSWindow?
 
     private var colorScheme: ColorScheme? {
         switch appColorScheme {
@@ -203,10 +204,17 @@ private struct RepoWindowContent: View {
                 ContentView(viewModel: vm)
                     .focusedValue(\.repositoryViewModel, vm)
                     .navigationTitle(vm.repository.displayName)
+                    .background(WindowAccessor { window in hostingWindow = window })
                     .onAppear {
                         if terminalOpenOnLaunch && vm.terminalSessions.isEmpty {
                             vm.createTerminalInPanel()
                         }
+                        appState.activate(id)
+                    }
+                    .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notification in
+                        guard let window = notification.object as? NSWindow,
+                              window == hostingWindow else { return }
+                        appState.activate(id)
                     }
             } else {
                 WelcomeView()
@@ -251,6 +259,20 @@ private struct RepoWindowContent: View {
                 }
             }
         }
+    }
+}
+
+private struct WindowAccessor: NSViewRepresentable {
+    let onResolve: (NSWindow?) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { onResolve(view.window) }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { onResolve(nsView.window) }
     }
 }
 
