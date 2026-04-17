@@ -9,7 +9,7 @@ struct DiffLineView: View {
     @AppStorage("showLineNumbers") private var showLineNumbers = true
     @AppStorage("diffTabWidth") private var tabWidth = 4
     @AppStorage("diffShowWhitespace") private var showWhitespace = false
-    @AppStorage("diffWordWrap") private var wordWrap = false
+    @AppStorage("diffWordWrap") private var wordWrap = true
 
     var body: some View {
         HStack(spacing: 0) {

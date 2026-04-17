@@ -588,7 +588,7 @@ private struct CodeReviewSettingsTab: View {
     @AppStorage("diffFontSize") private var diffFontSize = 12.0
     @AppStorage("diffContextLines") private var diffContextLines = 3
     @AppStorage("showLineNumbers") private var showLineNumbers = true
-    @AppStorage("diffWordWrap") private var diffWordWrap = false
+    @AppStorage("diffWordWrap") private var diffWordWrap = true
     @AppStorage("diffShowWhitespace") private var showWhitespace = false
     @AppStorage("diffTabWidth") private var tabWidth = 4
 
