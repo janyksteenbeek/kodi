@@ -1,6 +1,6 @@
 import Foundation
 
-struct DirectoryTreeNode: Identifiable {
+struct DirectoryTreeNode: Identifiable, Sendable {
     let id: String
     let name: String
     var children: [DirectoryTreeNode]

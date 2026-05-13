@@ -5,6 +5,9 @@ struct RepositorySection: View {
     @AppStorage("groupByFolder") private var groupByFolder = true
     @AppStorage("showUntrackedFiles") private var showUntrackedFiles = true
 
+    @State private var cachedTree: [FileTreeNode] = []
+    @State private var treeTask: Task<Void, Never>?
+
     private var visibleFiles: [ChangedFile] {
         if showUntrackedFiles {
             return viewModel.changedFiles
@@ -13,7 +16,17 @@ struct RepositorySection: View {
     }
 
     var body: some View {
-        if visibleFiles.isEmpty {
+        content
+            .onAppear { rebuildTreeIfNeeded() }
+            .onChange(of: viewModel.changedFiles) { rebuildTreeIfNeeded() }
+            .onChange(of: showUntrackedFiles) { rebuildTreeIfNeeded() }
+            .onChange(of: groupByFolder) { rebuildTreeIfNeeded() }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        let files = visibleFiles
+        if files.isEmpty {
             if viewModel.isLoading {
                 ProgressView()
                     .controlSize(.small)
@@ -34,14 +47,28 @@ struct RepositorySection: View {
                 .padding(.vertical, 4)
             }
         } else if groupByFolder {
-            let tree = FileTreeNode.buildTree(from: visibleFiles)
-            ForEach(tree) { node in
+            ForEach(cachedTree) { node in
                 FileTreeNodeView(node: node, viewModel: viewModel)
             }
         } else {
-            ForEach(visibleFiles) { file in
+            ForEach(files) { file in
                 ChangedFileRow(file: file, viewModel: viewModel)
                     .tag(file.path)
+            }
+        }
+    }
+
+    private func rebuildTreeIfNeeded() {
+        guard groupByFolder else { return }
+        let files = visibleFiles
+        treeTask?.cancel()
+        treeTask = Task {
+            let newTree = await Task.detached(priority: .userInitiated) {
+                FileTreeNode.buildTree(from: files)
+            }.value
+            if Task.isCancelled { return }
+            await MainActor.run {
+                self.cachedTree = newTree
             }
         }
     }

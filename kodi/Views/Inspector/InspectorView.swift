@@ -5,10 +5,8 @@ struct InspectorView: View {
     @State private var isCreatingFile = false
     @State private var isCreatingFolder = false
     @State private var newItemName = ""
-
-    private var tree: [DirectoryTreeNode] {
-        DirectoryTreeNode.buildTree(from: viewModel.directoryFiles)
-    }
+    @State private var tree: [DirectoryTreeNode] = []
+    @State private var treeTask: Task<Void, Never>?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -55,6 +53,8 @@ struct InspectorView: View {
                     )
                 }
             }
+            .onAppear { rebuildTree() }
+            .onChange(of: viewModel.directoryFiles) { rebuildTree() }
 
             Divider()
 
@@ -131,6 +131,18 @@ struct InspectorView: View {
         isCreatingFile = false
         isCreatingFolder = false
         newItemName = ""
+    }
+
+    private func rebuildTree() {
+        let files = viewModel.directoryFiles
+        treeTask?.cancel()
+        treeTask = Task {
+            let newTree = await Task.detached(priority: .userInitiated) {
+                DirectoryTreeNode.buildTree(from: files)
+            }.value
+            if Task.isCancelled { return }
+            await MainActor.run { self.tree = newTree }
+        }
     }
 
     private func handleSelectionChange(from previous: Set<String>, to newValue: Set<String>) {

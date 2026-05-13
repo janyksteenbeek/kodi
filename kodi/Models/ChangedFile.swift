@@ -1,7 +1,7 @@
 import SwiftUI
 
-struct ChangedFile: Identifiable, Hashable {
-    let id = UUID()
+struct ChangedFile: Identifiable, Hashable, Sendable {
+    var id: String { path }
     let path: String
     let status: FileStatus
     var isStaged: Bool
@@ -16,7 +16,7 @@ struct ChangedFile: Identifiable, Hashable {
         return dir == "." ? "" : dir
     }
 
-    enum FileStatus: String, CaseIterable {
+    enum FileStatus: String, CaseIterable, Sendable {
         case modified = "M"
         case added = "A"
         case deleted = "D"

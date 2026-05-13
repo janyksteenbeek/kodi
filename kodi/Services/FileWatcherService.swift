@@ -17,6 +17,7 @@ private func isIgnoredBuildDirectory(_ path: String) -> Bool {
 final class FileWatcherService {
     private var streams: [URL: FSEventStreamRef] = [:]
     private var debounceWorkItems: [URL: DispatchWorkItem] = [:]
+    private let queue = DispatchQueue(label: "com.kodi.filewatcher", qos: .utility)
     var onChange: ((URL, _ branchChanged: Bool) -> Void)?
 
     func watch(directory: URL) {
@@ -50,7 +51,8 @@ final class FileWatcherService {
 
             guard !relevantChanges.isEmpty else { return }
 
-            for (watchedURL, _) in watcher.streams {
+            let watchedURLs = watcher.streams.keys
+            for watchedURL in watchedURLs {
                 let watchedPath = watchedURL.path
                 if relevantChanges.contains(where: { $0.hasPrefix(watchedPath) }) {
                     watcher.debouncedNotify(for: watchedURL, branchChanged: sawBranchChange)
@@ -69,7 +71,7 @@ final class FileWatcherService {
             UInt32(kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagUseCFTypes)
         ) else { return }
 
-        FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetMain(), CFRunLoopMode.defaultMode.rawValue)
+        FSEventStreamSetDispatchQueue(stream, queue)
         FSEventStreamStart(stream)
         streams[directory] = stream
     }
@@ -92,10 +94,13 @@ final class FileWatcherService {
     private func debouncedNotify(for url: URL, branchChanged: Bool) {
         debounceWorkItems[url]?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
-            self?.onChange?(url, branchChanged)
+            guard let self else { return }
+            DispatchQueue.main.async {
+                self.onChange?(url, branchChanged)
+            }
         }
         debounceWorkItems[url] = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
+        queue.asyncAfter(deadline: .now() + 0.3, execute: workItem)
     }
 
     deinit {

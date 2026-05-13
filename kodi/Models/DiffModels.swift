@@ -1,7 +1,7 @@
 import SwiftUI
 
-struct DiffResult: Identifiable {
-    let id = UUID()
+struct DiffResult: Identifiable, Sendable {
+    var id: String { filePath }
     let filePath: String
     let oldPath: String?
     let hunks: [DiffHunk]
@@ -16,8 +16,8 @@ struct DiffResult: Identifiable {
     }
 }
 
-struct DiffHunk: Identifiable {
-    let id = UUID()
+struct DiffHunk: Identifiable, Sendable {
+    var id: String { "\(oldStart),\(oldCount)-\(newStart),\(newCount)" }
     let header: String
     let oldStart: Int
     let oldCount: Int
@@ -26,14 +26,14 @@ struct DiffHunk: Identifiable {
     let lines: [DiffLine]
 }
 
-struct DiffLine: Identifiable {
-    let id = UUID()
+struct DiffLine: Identifiable, Sendable {
+    var id: String { "\(oldLineNumber ?? -1):\(newLineNumber ?? -1):\(type)" }
     let type: LineType
     let content: String
     let oldLineNumber: Int?
     let newLineNumber: Int?
 
-    enum LineType {
+    enum LineType: Sendable {
         case context
         case addition
         case deletion

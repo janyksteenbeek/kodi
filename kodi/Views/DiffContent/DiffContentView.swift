@@ -3,7 +3,7 @@ import SwiftUI
 struct DiffContentView: View {
     @Bindable var viewModel: RepositoryViewModel
     private let largeDiffThreshold = 500
-    @State private var expandedLargeDiffs: Set<UUID> = []
+    @State private var expandedLargeDiffs: Set<String> = []
 
     var body: some View {
         Group {

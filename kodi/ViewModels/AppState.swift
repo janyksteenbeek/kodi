@@ -33,7 +33,10 @@ final class AppState {
 
     func activate(_ id: UUID) {
         for (vmId, vm) in repositoryViewModels {
-            vm.isActive = (vmId == id)
+            let shouldBeActive = (vmId == id)
+            if vm.isActive != shouldBeActive {
+                vm.isActive = shouldBeActive
+            }
         }
         guard let vm = repositoryViewModels[id] else { return }
         if vm.needsRefresh {

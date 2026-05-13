@@ -1,6 +1,6 @@
 import Foundation
 
-struct FileTreeNode: Identifiable {
+struct FileTreeNode: Identifiable, Sendable {
     let id: String
     let name: String
     var children: [FileTreeNode]

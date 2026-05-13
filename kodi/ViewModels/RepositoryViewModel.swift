@@ -162,14 +162,19 @@ final class RepositoryViewModel: Identifiable {
     private func loadAllDiffs() async {
         do {
             let combined = try await gitService.diffAll(at: repository.path)
-            var results = DiffParser.parse(combined)
+            var results = await Task.detached(priority: .userInitiated) {
+                DiffParser.parse(combined)
+            }.value
 
             // `git diff` doesn't include untracked files; append them synthesized.
             let untracked = changedFiles.filter { $0.status == .untracked }
             for file in untracked {
                 do {
                     let raw = try await gitService.diffUntrackedFile(at: repository.path, file: file.path)
-                    results.append(contentsOf: DiffParser.parse(raw))
+                    let parsed = await Task.detached(priority: .userInitiated) {
+                        DiffParser.parse(raw)
+                    }.value
+                    results.append(contentsOf: parsed)
                 } catch { }
             }
             currentDiff = results
@@ -371,12 +376,17 @@ final class RepositoryViewModel: Identifiable {
 
         do {
             let combined = try await gitService.diffAll(at: repository.path)
-            var results = DiffParser.parse(combined).filter { selectedPaths.contains($0.filePath) }
+            var results = await Task.detached(priority: .userInitiated) {
+                DiffParser.parse(combined).filter { selectedPaths.contains($0.filePath) }
+            }.value
 
             for file in files where file.status == .untracked {
                 do {
                     let raw = try await gitService.diffUntrackedFile(at: repository.path, file: file.path)
-                    results.append(contentsOf: DiffParser.parse(raw))
+                    let parsed = await Task.detached(priority: .userInitiated) {
+                        DiffParser.parse(raw)
+                    }.value
+                    results.append(contentsOf: parsed)
                 } catch { }
             }
             currentDiff = results
@@ -668,7 +678,9 @@ final class RepositoryViewModel: Identifiable {
             } else {
                 rawDiff = try await gitService.diffForFile(at: repository.path, file: path, staged: file.isStaged)
             }
-            currentDiff = DiffParser.parse(rawDiff)
+            currentDiff = await Task.detached(priority: .userInitiated) {
+                DiffParser.parse(rawDiff)
+            }.value
         } catch {
             self.error = error.localizedDescription
         }

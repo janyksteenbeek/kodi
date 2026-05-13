@@ -4,14 +4,9 @@ struct GlobalSearchView: View {
     @Bindable var viewModel: RepositoryViewModel
     @State private var query: String = ""
     @State private var selectedIndex: Int = 0
+    @State private var results: [SearchResult] = []
+    @State private var searchTask: Task<Void, Never>?
     @FocusState private var isSearchFieldFocused: Bool
-
-    private var results: [SearchResult] {
-        guard !query.isEmpty else { return [] }
-        return fuzzyMatch(query: query, in: viewModel.directoryFiles)
-            .prefix(20)
-            .map { $0 }
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,6 +25,7 @@ struct GlobalSearchView: View {
                     }
                     .onChange(of: query) {
                         selectedIndex = 0
+                        runSearch()
                     }
             }
             .padding(.horizontal, 16)
@@ -106,6 +102,25 @@ struct GlobalSearchView: View {
         }
     }
 
+    private func runSearch() {
+        searchTask?.cancel()
+        let q = query
+        let files = viewModel.directoryFiles
+        guard !q.isEmpty else {
+            results = []
+            return
+        }
+        searchTask = Task {
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            if Task.isCancelled { return }
+            let matches = await Task.detached(priority: .userInitiated) {
+                Array(fuzzyMatch(query: q, in: files).prefix(20))
+            }.value
+            if Task.isCancelled { return }
+            await MainActor.run { self.results = matches }
+        }
+    }
+
     private func openSelected() {
         guard !results.isEmpty, selectedIndex < results.count else { return }
         let path = results[selectedIndex].path
@@ -145,7 +160,7 @@ private struct SearchResultRow: View {
 
 // MARK: - Fuzzy Match
 
-struct SearchResult: Identifiable {
+struct SearchResult: Identifiable, Sendable {
     let id: String
     let path: String
     let fileName: String
