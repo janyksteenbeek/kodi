@@ -14,6 +14,7 @@ final class TerminalSession: Identifiable {
     var activityState: TerminalActivityState = .idle
 
     private(set) var terminalView: LocalProcessTerminalView?
+    private(set) var containerView: TerminalResizeContainerView?
     private var delegateHandler: TerminalDelegateHandler?
     private var activityTimer: Timer?
     private var loadingTimer: Timer?
@@ -26,7 +27,13 @@ final class TerminalSession: Identifiable {
     }
 
     func startProcess() {
-        let tv = LocalProcessTerminalView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+        let initialFrame = NSRect(x: 0, y: 0, width: 800, height: 600)
+        let tv = LocalProcessTerminalView(frame: initialFrame)
+        let container = TerminalResizeContainerView(frame: initialFrame)
+        tv.translatesAutoresizingMaskIntoConstraints = true
+        tv.autoresizingMask = []
+        tv.frame = container.bounds
+        container.addSubview(tv)
 
         let fontSize = UserDefaults.standard.double(forKey: "terminalFontSize")
         tv.font = NSFont.monospacedSystemFont(ofSize: fontSize > 0 ? fontSize : 13, weight: .regular)
@@ -63,6 +70,7 @@ final class TerminalSession: Identifiable {
         tv.menu = menu
 
         self.terminalView = tv
+        self.containerView = container
     }
 
     func startProcess(initialCommand: String, program: TerminalProgram = .shell) {
@@ -128,6 +136,8 @@ final class TerminalSession: Identifiable {
         loadingTimer = nil
         terminalView?.send([0x04])
         terminalView = nil
+        containerView?.removeFromSuperview()
+        containerView = nil
         delegateHandler = nil
     }
 
@@ -136,6 +146,7 @@ final class TerminalSession: Identifiable {
         loadingTimer?.invalidate()
         if isRunning {
             terminalView = nil
+            containerView = nil
             delegateHandler = nil
         }
     }

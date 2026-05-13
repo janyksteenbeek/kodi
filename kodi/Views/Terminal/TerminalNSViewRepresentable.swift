@@ -5,57 +5,37 @@ struct TerminalNSViewRepresentable: NSViewRepresentable {
     let session: TerminalSession
 
     func makeNSView(context: Context) -> NSView {
-        let container = TerminalResizeContainerView()
-        attachTerminalView(to: container)
+        guard let container = session.containerView else { return NSView() }
+        // The container lives on the session for its whole lifetime. If SwiftUI
+        // hasn't dismantled a previous host yet (e.g. tab → panel move), detach
+        // before reattaching to avoid the "view already has a superview" assert.
+        container.removeFromSuperview()
         return container
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        guard let tv = session.terminalView else { return }
-
-        // Already correctly attached — nothing to do
-        if tv.superview == nsView { return }
-
-        // Remove all old subviews (previous terminal that was swapped out)
-        for subview in nsView.subviews {
-            subview.removeFromSuperview()
-        }
-
-        attachTerminalView(to: nsView)
+        // No-op. The container is stable across renders — moving it would
+        // force AppKit to invalidate SwiftTerm's layer-backed contents, which
+        // is exactly the "replay the scrollback" symptom we want to avoid.
     }
 
-    private func attachTerminalView(to container: NSView) {
-        guard let tv = session.terminalView else { return }
-
-        // Remove from any previous container (terminal can only be in one place)
-        tv.removeFromSuperview()
-        // Use manual layout (no auto-layout constraints) so the container can
-        // choose when to propagate size changes to the terminal — SwiftTerm
-        // reflows its grid on every frame change, which makes text jump around
-        // mid-drag.
-        tv.translatesAutoresizingMaskIntoConstraints = true
-        tv.autoresizingMask = []
-        tv.frame = container.bounds
-        container.addSubview(tv)
-
-        tv.needsLayout = true
-        tv.needsDisplay = true
+    static func dismantleNSView(_ nsView: NSView, coordinator: ()) {
+        nsView.removeFromSuperview()
     }
 }
 
-/// Container that freezes terminal resizing during live/interactive drags.
-/// SwiftTerm reflows its grid on every frame change, causing visible text
-/// jitter. The child has no autoresizing mask — we explicitly set its frame
-/// only when we want the terminal to reflow (drag end, or debounced after
-/// programmatic size changes settle).
+/// Container that suppresses terminal resizing only during native NSWindow
+/// live-resize (window edge drag), where SwiftTerm's per-frame reflow is
+/// genuinely jittery. Everything else — SwiftUI layout updates, SplitDivider
+/// drag, initial sizing — must propagate immediately so SwiftTerm's grid
+/// (and the SIGWINCH it sends to the child process) stays in sync with the
+/// visible area. Delaying that breaks TUI apps like claude-code.
 final class TerminalResizeContainerView: NSView {
     private var isLiveResizing = false
-    private var pendingResizeWorkItem: DispatchWorkItem?
 
     override func viewWillStartLiveResize() {
         super.viewWillStartLiveResize()
         isLiveResizing = true
-        pendingResizeWorkItem?.cancel()
     }
 
     override func viewDidEndLiveResize() {
@@ -67,22 +47,12 @@ final class TerminalResizeContainerView: NSView {
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         if isLiveResizing { return }
-        scheduleDebouncedApply()
+        applyBoundsToChildren()
     }
 
     private func applyBoundsToChildren() {
         for sub in subviews where sub.frame != bounds {
             sub.frame = bounds
         }
-    }
-
-    private func scheduleDebouncedApply() {
-        pendingResizeWorkItem?.cancel()
-        let item = DispatchWorkItem { [weak self] in
-            guard let self, !self.isLiveResizing else { return }
-            self.applyBoundsToChildren()
-        }
-        pendingResizeWorkItem = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: item)
     }
 }

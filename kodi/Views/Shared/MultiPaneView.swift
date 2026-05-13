@@ -36,6 +36,7 @@ struct MultiPaneView<Item: Identifiable, Header: View, Content: View>: View {
                 paneView(item: item)
             }
         }
+        .animation(nil, value: items.map { $0.id })
     }
 
     @ViewBuilder
@@ -66,6 +67,7 @@ struct MultiPaneView<Item: Identifiable, Header: View, Content: View>: View {
                 }
             }
         }
+        .animation(nil, value: items.map { $0.id })
     }
 
     @ViewBuilder

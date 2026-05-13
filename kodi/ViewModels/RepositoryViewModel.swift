@@ -223,10 +223,9 @@ final class RepositoryViewModel: Identifiable {
     var panelTerminalID: UUID? {
         get { panelTerminalIDs.first }
         set {
-            if let id = newValue {
-                panelTerminalIDs = [id]
-            } else {
-                panelTerminalIDs = []
+            let next: [UUID] = newValue.map { [$0] } ?? []
+            if panelTerminalIDs != next {
+                panelTerminalIDs = next
             }
         }
     }
