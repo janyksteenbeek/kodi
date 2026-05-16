@@ -104,6 +104,10 @@ struct kodiApp: App {
 
                 Divider()
 
+                ShowHistoryMenuItem(focusedVM: focusedVM)
+
+                Divider()
+
                 Button("Stage All") {
                     if let vm = focusedVM {
                         vm.setStaging(true, for: vm.changedFiles)
@@ -179,6 +183,45 @@ struct kodiApp: App {
         Settings {
             SettingsView()
         }
+
+        WindowGroup(id: "history", for: UUID.self) { $repoID in
+            HistoryWindowHost(repoID: repoID, appState: appState)
+                .environment(appState)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 720, height: 720)
+    }
+}
+
+private struct HistoryWindowHost: View {
+    let repoID: UUID?
+    let appState: AppState
+
+    var body: some View {
+        if let id = repoID, let vm = appState.viewModel(for: id) {
+            HistoryWindowView(repository: vm.repository)
+        } else {
+            ContentUnavailableView(
+                "Repository unavailable",
+                systemImage: "questionmark.folder",
+                description: Text("The repository this window referenced is no longer open.")
+            )
+        }
+    }
+}
+
+private struct ShowHistoryMenuItem: View {
+    let focusedVM: RepositoryViewModel?
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("Show History…") {
+            if let id = focusedVM?.repository.id {
+                openWindow(id: "history", value: id)
+            }
+        }
+        .keyboardShortcut("y", modifiers: [.command, .option])
+        .disabled(focusedVM == nil)
     }
 }
 

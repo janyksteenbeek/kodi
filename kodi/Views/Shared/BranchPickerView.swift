@@ -57,6 +57,7 @@ private struct BranchListPopover: View {
     @Binding var showNewBranch: Bool
     @Binding var showMerge: Bool
     @State private var searchText = ""
+    @Environment(\.openWindow) private var openWindow
 
     private var filteredLocalBranches: [String] {
         guard !searchText.isEmpty else { return viewModel.localBranches }
@@ -131,6 +132,22 @@ private struct BranchListPopover: View {
                 }
             }
             .frame(maxHeight: 300)
+
+            Divider()
+
+            // View history
+            Button {
+                isPresented = false
+                openWindow(id: "history", value: viewModel.repository.id)
+            } label: {
+                Label("View History", systemImage: "clock.arrow.circlepath")
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
 
             Divider()
 

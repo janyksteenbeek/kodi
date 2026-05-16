@@ -207,6 +207,21 @@ final class GitService: Sendable {
         _ = try await runGit(["merge", branch], at: repositoryPath)
     }
 
+    // MARK: - History
+
+    nonisolated func log(branch: String?, skip: Int, limit: Int, at repositoryPath: URL) async throws -> String {
+        let fmt = "--pretty=format:%H%x1f%an%x1f%ae%x1f%aI%x1f%s%x1f%b%x1e"
+        var args = ["log", fmt, "--skip=\(skip)", "-n", "\(limit)"]
+        if let branch, !branch.isEmpty {
+            args.append(branch)
+        }
+        return try await runGit(args, at: repositoryPath)
+    }
+
+    nonisolated func show(commit sha: String, at repositoryPath: URL) async throws -> String {
+        try await runGit(["show", "--no-color", "--patch", "--format=", sha], at: repositoryPath)
+    }
+
     // MARK: - Private
 
     nonisolated private func runGit(_ arguments: [String], at directory: URL) async throws -> String {
